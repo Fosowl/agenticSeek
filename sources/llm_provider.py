@@ -1,4 +1,3 @@
-
 import time
 import ollama
 from ollama import chat
@@ -8,9 +7,12 @@ import ipaddress
 import platform
 from dotenv import load_dotenv, set_key
 from openai import OpenAI
-from huggingface_hub import InferenceClient
 import os
 import httpx
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 class Provider:
     def __init__(self, provider_name, model, server_address = "127.0.0.1:5000"):
@@ -117,7 +119,7 @@ class Provider:
             raise f"{str(e)}\n\nError occured with server route. Are you using the correct address for the config.ini provider?"
         except Exception as e:
             raise e
-        return thought
+        return thought.strip()
 
     def ollama_fn(self, history, verbose = False):
         """
@@ -143,29 +145,37 @@ class Provider:
             if "refused" in str(e).lower():
                 raise Exception("Ollama connection failed. is the server running ?") from e
             raise e
-        return thought
+        return thought.strip()
     
     def huggingface_fn(self, history, verbose=False):
         """
         Use huggingface to generate text.
         """
-        client = InferenceClient(
-        	api_key=self.get_api_key("huggingface")
-        )
-        completion = client.chat.completions.create(
-            model=self.model, 
-        	messages=history, 
-        	max_tokens=1024,
-        )
-        thought = completion.choices[0].message
-        return thought.content
+        if config.getboolean('MAIN', 'is_local'):
+            from huggingface_hub import InferenceClient
+            client = InferenceClient(
+        	    api_key=self.get_api_key("huggingface")
+            )
+            completion = client.chat.completions.create(
+                model=self.model, 
+        	    messages=history, 
+        	    max_tokens=1024,
+            )
+            thought = completion.choices[0].message
+            return thought.content.strip()
+        else:
+            raise Exception("HuggingFace InferenceClient is only available in local mode.")
 
     def openai_fn(self, history, verbose=False):
         """
         Use openai to generate text.
         """
         api_key = self.get_api_key("openai")
-        client = OpenAI(api_key=api_key)
+        # Always use base_url if provider_server_address is provided
+        if config['MAIN']['provider_server_address']:
+            client = OpenAI(api_key=api_key, base_url=f"http://{config['MAIN']['provider_server_address']}")
+        else:
+            client = OpenAI(api_key=api_key)
         try:
             response = client.chat.completions.create(
                 model=self.model,
@@ -174,7 +184,7 @@ class Provider:
             thought = response.choices[0].message.content
             if verbose:
                 print(thought)
-            return thought
+            return thought.strip()
         except Exception as e:
             raise Exception(f"OpenAI API error: {str(e)}") from e
 

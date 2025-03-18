@@ -1,7 +1,9 @@
 import os
 import sys
-import torch
-from transformers import pipeline
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -16,17 +18,20 @@ class AgentRouter:
     AgentRouter is a class that selects the appropriate agent based on the user query.
     """
     def __init__(self, agents: list, model_name: str = "facebook/bart-large-mnli"):
-        self.model = model_name 
-        self.pipeline = pipeline("zero-shot-classification",
-                      model=self.model)
+        self.model = model_name
+        self.pipeline = None
+        if config.getboolean('MAIN', 'is_local') and config["MAIN"]["provider_name"] != "openai":
+            import torch
+            self.device = "mps" if torch.backends.mps.is_available() else "cuda:0" if torch.cuda.is_available() else "cpu"
+            from transformers import pipeline
+            self.pipeline = pipeline("zero-shot-classification",
+                          model=self.model, device = self.device)
         self.agents = agents
         self.labels = [agent.role for agent in agents]
 
     def get_device(self) -> str:
-        if torch.backends.mps.is_available():
-            return "mps"
-        elif torch.cuda.is_available():
-            return "cuda:0"
+        if config.getboolean('MAIN', 'is_local') and config["MAIN"]["provider_name"] != "openai":
+            return self.device
         else:
             return "cpu"
 
@@ -39,14 +44,43 @@ class AgentRouter:
         Returns:
             list: The list of agents and their scores
         """
+        # if not config.getboolean('MAIN', 'is_local'):
+        #     print("Warning: Agent Router is not running locally, classification is disabled.")
+        #     return {"labels": [self.labels[0]], "scores": [1.0]}
+
         first_sentence = None
         for line in text.split("\n"):
                 first_sentence = line.strip()
                 break
         if first_sentence is None:
             first_sentence = text
-        result = self.pipeline(first_sentence, self.labels, threshold=threshold)
-        return result
+        
+        if config["MAIN"]["provider_name"] == "openai":
+            from openai import OpenAI
+            client = OpenAI(base_url=f"http://{config['MAIN']['provider_server_address']}", api_key="none")
+            try:
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "You are a zero-shot classifier.  Given a sentence, you must classify it into one of these categories: " + ", ".join(self.labels)},
+                        {"role": "user", "content": first_sentence}
+                    ],
+                    temperature=0.0
+                )
+                classification = response.choices[0].message.content.strip()
+                scores = [0.0] * len(self.labels)
+                if classification in self.labels:
+                    index = self.labels.index(classification)
+                    scores[index] = 1.0
+                else:
+                    print(f"Warning: Classification '{classification}' not found in labels.")
+                return {"labels": [classification], "scores": scores}
+            except Exception as e:
+                print(f"Error during OpenAI classification: {e}")
+                return {"labels": [self.labels[0]], "scores": [0.0]}
+        else:
+            result = self.pipeline(first_sentence, self.labels, threshold=threshold)
+            return result
     
     def select_agent(self, text: str) -> Agent:
         """
@@ -59,17 +93,22 @@ class AgentRouter:
         if len(self.agents) == 0 or len(self.labels) == 0:
             return self.agents[0]
         result = self.classify_text(text)
+        selected_agent = None
         for agent in self.agents:
             if result["labels"][0] == agent.role:
-                pretty_print(f"Selected agent: {agent.agent_name}", color="warning")
-                return agent
-        return None
+                selected_agent = agent
+                break
+        if selected_agent is None:
+            pretty_print(f"No agent found for classification '{result['labels'][0]}', using default agent.", color="warning")
+            selected_agent = self.agents[0]  # Use the first agent as the default
+        pretty_print(f"Selected agent: {selected_agent.agent_name}", color="warning")
+        return selected_agent
 
 if __name__ == "__main__":
     agents = [
-        CoderAgent("deepseek-r1:14b", "agent1", "../prompts/coder_agent.txt", "server"),
-        CasualAgent("deepseek-r1:14b", "agent2", "../prompts/casual_agent.txt", "server"),
-        PlannerAgent("deepseek-r1:14b", "agent3", "../prompts/planner_agent.txt", "server")
+        CoderAgent(config["MAIN"]["provider_model"], "agent1", "../prompts/coder_agent.txt", "server"),
+        CasualAgent(config["MAIN"]["provider_model"], "agent2", "../prompts/casual_agent.txt", "server"),
+        PlannerAgent(config["MAIN"]["provider_model"], "agent3", "../prompts/planner_agent.txt", "server")
     ]
     router = AgentRouter(agents)
     

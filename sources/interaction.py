@@ -1,8 +1,9 @@
-
-from sources.text_to_speech import Speech
 from sources.utility import pretty_print
 from sources.router import AgentRouter
-from sources.speech_to_text import AudioTranscriber, AudioRecorder
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 class Interaction:
     """
@@ -16,20 +17,21 @@ class Interaction:
         self.agents = agents
         self.current_agent = None
         self.router = AgentRouter(self.agents)
-        self.speech = Speech()
         self.is_active = True
         self.last_query = None
         self.last_answer = None
         self.ai_name = self.find_ai_name()
         self.tts_enabled = tts_enabled
         self.stt_enabled = stt_enabled
-        if stt_enabled:
-            self.transcriber = AudioTranscriber(self.ai_name, verbose=False)
-            self.recorder = AudioRecorder()
         if tts_enabled:
+            from sources.text_to_speech import Speech
+            self.speech = Speech()
             self.speech.speak("Hello, we are online and ready. What can I do for you ?")
         if recover_last_session:
             self.recover_last_session()
+
+        self.transcriber = None
+        self.recorder = None
     
     def find_ai_name(self) -> str:
         """Find the name of the default AI. It is required for STT as a trigger word."""
@@ -69,17 +71,22 @@ class Interaction:
     
     def transcription_job(self) -> str:
         """Transcribe the audio from the microphone."""
-        self.recorder = AudioRecorder(verbose=True)
-        self.transcriber = AudioTranscriber(self.ai_name, verbose=True)
-        self.transcriber.start()
-        self.recorder.start()
-        self.recorder.join()
-        self.transcriber.join()
-        query = self.transcriber.get_transcript()
-        return query
+        if self.stt_enabled:
+            from sources.speech_to_text import AudioTranscriber, AudioRecorder
+            self.recorder = AudioRecorder(verbose=True)
+            self.transcriber = AudioTranscriber(self.ai_name, verbose=True)
+            self.transcriber.start()
+            self.recorder.start()
+            self.recorder.join()
+            self.transcriber.join()
+            query = self.transcriber.get_transcript()
+            return query
+        else:
+            return None
 
     def get_user(self) -> str:
         """Get the user input from the microphone or the keyboard."""
+        query = None
         if self.stt_enabled:
             query = "TTS transcription of user: " + self.transcription_job()
         else:
@@ -102,7 +109,10 @@ class Interaction:
             self.current_agent = agent
             # get history from previous agent, good ?
             self.current_agent.memory.push('user', self.last_query)
-        self.last_answer, _ = agent.process(self.last_query, self.speech)
+        if self.tts_enabled:
+            self.last_answer, _ = agent.process(self.last_query, self.speech)
+        else:
+            self.last_answer, _ = agent.process(self.last_query, None)
     
     def show_answer(self) -> None:
         """Show the answer to the user."""
@@ -111,4 +121,3 @@ class Interaction:
         self.current_agent.show_answer()
         if self.tts_enabled:
             self.speech.speak(self.last_answer)
-

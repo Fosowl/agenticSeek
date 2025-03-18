@@ -1,11 +1,13 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import time
 import datetime
 import uuid
 import os
 import sys
 import json
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -31,9 +33,13 @@ class Memory():
         self.model = "pszemraj/led-base-book-summary"
         self.device = self.get_cuda_device()
         self.memory_compression = memory_compression
-        if memory_compression:
+        self.tokenizer = None
+        self.model_compressor = None
+        if config.getboolean('MAIN', 'is_local') and memory_compression:
+            import torch
+            from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
             self.tokenizer = AutoTokenizer.from_pretrained(self.model)
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model)
+            self.model_compressor = AutoModelForSeq2SeqLM.from_pretrained(self.model)
     
     def get_filename(self) -> str:
         return f"memory_{self.session_time.strftime('%Y-%m-%d_%H-%M-%S')}.txt"
@@ -88,10 +94,14 @@ class Memory():
         return self.memory
 
     def get_cuda_device(self) -> str:
-        if torch.backends.mps.is_available():
-            return "mps"
-        elif torch.cuda.is_available():
-            return "cuda"
+        if config.getboolean('MAIN', 'is_local'):
+            import torch
+            if torch.backends.mps.is_available():
+                return "mps"
+            elif torch.cuda.is_available():
+                return "cuda"
+            else:
+                return "cpu"
         else:
             return "cpu"
 
@@ -104,22 +114,42 @@ class Memory():
         Returns:
             str: The summarized text
         """
-        if self.tokenizer is None or self.model is None:
+        if self.tokenizer is None or self.model_compressor is None:
             return text
         max_length = len(text) // 2 if len(text) > min_length*2 else min_length*2
         input_text = "summarize: " + text
         inputs = self.tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
-        summary_ids = self.model.generate(
-            inputs['input_ids'],
-            max_length=max_length,  # Maximum length of the summary
-            min_length=min_length,  # Minimum length of the summary
-            length_penalty=1.0,  # Adjusts length preference
-            num_beams=4,  # Beam search for better quality
-            early_stopping=True  # Stop when all beams finish
-        )
-        summary = self.tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-        summary.replace('summary:', '')
-        return summary
+        
+        if config["MAIN"]["provider_name"] == "openai":
+            from openai import OpenAI
+            client = OpenAI(base_url=f"http://{config['MAIN']['provider_server_address']}", api_key="none")
+            try:
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "You are a summarization expert."},
+                        {"role": "user", "content": input_text}
+                    ],
+                    temperature=0.0
+                )
+                summary = response.choices[0].message.content.strip()
+                summary.replace('summary:', '')
+                return summary
+            except Exception as e:
+                print(f"Error during OpenAI summarization: {e}")
+                return text
+        else:
+            summary_ids = self.model_compressor.generate(
+                inputs['input_ids'],
+                max_length=max_length,  # Maximum length of the summary
+                min_length=min_length,  # Minimum length of the summary
+                length_penalty=1.0,  # Adjusts length preference
+                num_beams=4,  # Beam search for better quality
+                early_stopping=True  # Stop when all beams finish
+            )
+            summary = self.tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+            summary.replace('summary:', '')
+            return summary
     
     @timer_decorator
     def compress(self) -> str:
@@ -162,4 +192,3 @@ Ensure the file exists in the specified location.
     memory.compress()
     print("\n---\nmemory after:", memory.get())
     memory.save_memory()
-    

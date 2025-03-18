@@ -25,7 +25,7 @@ class Browser:
         self.anticaptcha = "https://chrome.google.com/webstore/detail/nopecha-captcha-solver/dknlfmjaanfblgfdfebhijalfmhmjjjo/related"
         try:
             chrome_options = Options()
-            chrome_path = self.get_chrome_path()
+            chrome_path = Browser.get_chrome_path()
             
             if not chrome_path:
                 raise FileNotFoundError("Google Chrome not found. Please install it.")
@@ -61,7 +61,7 @@ class Browser:
         elif sys.platform.startswith("darwin"):  # macOS
             paths = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"]
         else:  # Linux
-            paths = ["/usr/bin/google-chrome", "/usr/bin/chromium-browser", "/usr/bin/chromium"]
+            paths = ["/usr/bin/chromium-browser", "/usr/bin/google-chrome", "/usr/bin/chromium"]
 
         for path in paths:
             if os.path.exists(path) and os.access(path, os.X_OK):  # Check if executable
