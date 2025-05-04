@@ -31,7 +31,7 @@ services:
     volumes:
       - ./searxng:/etc/searxng:rw
     environment:
-      - SEARXNG_BASE_URL=http://localhost:8080/
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8080/}
       - SEARXNG_SECRET_KEY=$(openssl rand -hex 32)
       - UWSGI_WORKERS=4
       - UWSGI_THREADS=4
@@ -62,15 +62,30 @@ services:
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-      - BACKEND_URL=http://backend:8000
+      - REACT_APP_BACKEND_URL=http://0.0.0.0:${BACKEND_PORT:-8000}
     networks:
       - agentic-seek-net
-  
+
+  python-env:
+    container_name: python-env
+    build:
+      context: .
+      dockerfile: Dockerfile.python-env
+    ports:
+      - ${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}
+    volumes:
+      - ./:/app
+      - ${WORK_DIR}:${WORK_DIR}
+    command: python3 api.py
+    environment:
+      - SEARXNG_URL=http://localhost:8080
+      - WORK_DIR=${WORK_DIR}
+    network_mode: "host"
+
   # NOTE: backend service is not working yet due to issue with chromedriver on docker.
   # Therefore backend is run on host machine.
   # Open to pull requests to fix this.
-
-  #backend:
+#backend:
   #  container_name: backend
   #  build:
   #    context: ./
@@ -95,6 +110,7 @@ services:
   #    - searxng
   #  networks:
   #    - agentic-seek-net
+
   
 volumes:
   redis-data:

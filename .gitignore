@@ -204,3 +204,12 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Config ini
+config.ini
+
+# Mise if using it
+mise.toml
+
+# Quick hack to avoid including the chrome136 folder
+chrome136/
