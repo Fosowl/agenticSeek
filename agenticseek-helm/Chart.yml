@@ -1,0 +1,10 @@
+apiVersion: v2
+name: agenticseek
+description: Helm chart for agenticSeek stack
+version: 0.1.0
+appVersion: "1.0"
+dependencies:
+  - name: redis
+    version: 17.11.6
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: searxng
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: searxng
+  template:
+    metadata:
+      labels:
+        app: searxng
+    spec:
+      containers:
+      - name: searxng
+        image: {{ .Values.searxng.image }}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SEARXNG_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: searxng-secret
+              key: secret-key
+        - name: UWSGI_WORKERS
+          value: "{{ .Values.searxng.workers }}"
+        volumeMounts:
+        - name: searxng-config
+          mountPath: /etc/searxng
+      volumes:
+      - name: searxng-config
+        hostPath:
+          path: {{ .Values.searxng.hostPath }}
+          type: Directory

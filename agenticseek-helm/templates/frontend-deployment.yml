@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: {{ .Values.frontend.image }}
+        ports:
+        - containerPort: {{ .Values.frontend.port }}
+        env:
+        - name: NODE_ENV
+          value: {{ .Values.frontend.nodeEnv }}
+        volumeMounts:
+        - name: frontend-src
+          mountPath: /app/src
+        - name: frontend-screenshots
+          mountPath: /app/screenshots
+      volumes:
+      - name: frontend-src
+        hostPath:
+          path: {{ .Values.frontend.hostPaths.src }}
+      - name: frontend-screenshots
+        hostPath:
+          path: {{ .Values.frontend.hostPaths.screenshots }}

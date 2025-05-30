@@ -1,0 +1,28 @@
+# Redis Configuration
+redis:
+  enabled: true
+  image: valkey/valkey:8-alpine
+  storage: 1Gi
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+
+# SearXNG Configuration
+searxng:
+  image: searxng/searxng:latest
+  baseUrl: http://localhost:8080/
+  workers: 4
+  threads: 4
+  hostPath: "/mnt/searxng"  # Adjust for your host
+  secretKey: ""  # Auto-generated if empty
+
+# Frontend Configuration
+frontend:
+  image: agenticseek-frontend:latest
+  nodeEnv: development
+  backendUrl: http://backend:8000
+  port: 3000
+  hostPaths:
+    src: "/mnt/frontend/src"  # Adjust for your host
+    screenshots: "/mnt/screenshots"
