@@ -211,6 +211,7 @@ Example: export `TOGETHER_API_KEY="xxxxx"`
 | huggingface| No    | Hugging-Face API (non-private)                            |
 | togetherAI | No    | Use together AI API (non-private)                         |
 | google | No    | Use google gemini API (non-private)                         |
+| modelscope| No    | ModelScope API (non-private)                            |
 
 *We advice against using gpt-4o or other closedAI models*, performance are poor for web browsing and task planning.
 
@@ -452,6 +453,7 @@ The table below show the available providers:
 | huggingface| No    | Hugging-Face API (non-private)                            |
 | togetherAI | No    | Use together AI API (non-private)                         |
 | google | No    | Use google gemini API (non-private)                         |
+| modelscope| No    | ModelScope API (non-private)                            |
 
 To select a provider change the config.ini:
 

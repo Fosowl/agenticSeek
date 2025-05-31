@@ -32,11 +32,12 @@ class Provider:
             "together": self.together_fn,
             "dsk_deepseek": self.dsk_deepseek,
             "openrouter": self.openrouter_fn,
+            "modelscope": self.modelscope_fn,
             "test": self.test_fn
         }
         self.logger = Logger("provider.log")
         self.api_key = None
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter","modelscope"]
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
@@ -319,6 +320,34 @@ class Provider:
             return thought
         except Exception as e:
             raise Exception(f"Deepseek API error: {str(e)}") from e
+
+    def modelscope_fn(self, history, verbose=False):
+        """
+        Use modelscope api to generate text.
+        """
+        client = OpenAI(api_key=self.api_key, base_url="https://api-inference.modelscope.cn/v1/")
+        extra_body = {
+            "enable_thinking": False,
+        }
+        if self.is_local:
+            raise Exception("ModelScope (API) is not available for local use. Change config.ini")
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=history,
+                stream=True,
+                extra_body=extra_body
+            )
+            thought = ""
+            for chunk in response:
+                answer_chunk = chunk.choices[0].delta.content
+                if answer_chunk:
+                    thought += answer_chunk
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"ModelScope API error: {str(e)}") from e
 
     def lm_studio_fn(self, history, verbose=False):
         """

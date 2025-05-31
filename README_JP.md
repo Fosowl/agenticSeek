@@ -220,6 +220,7 @@ APIキーをエクスポートします：`export <<PROVIDER>>_API_KEY="xxx"`
 | huggingface| いいえ    | Hugging-Face API（非プライベート）                            |
 | togetherAI | いいえ    | together AI APIを使用（非プライベート）                         |
 | google | いいえ    | google gemini APIを使用（非プライベート）                         |
+| modelscope| いいえ    | ModelScope API（非プライベート）                            |
 
 *gpt-4oや他のclosedAIモデルの使用は推奨しません*。ウェブブラウジングやタスク計画のパフォーマンスが悪いです。
 
@@ -461,6 +462,7 @@ stealth_mode = False
 | huggingface| いいえ    | Hugging-Face API（非プライベート）                            |
 | togetherAI | いいえ    | together AI APIを使用（非プライベート）                         |
 | google | いいえ    | google gemini APIを使用（非プライベート）                         |
+| modelscope| いいえ    | ModelScope API（非プライベート）                            |
 
 プロバイダーを選択するには、config.iniを変更します：
 

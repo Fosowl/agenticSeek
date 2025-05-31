@@ -347,6 +347,7 @@ provider_server_address = 127.0.0.1:5000 # n'importe pas
 | huggingface  | Non     | API Hugging-Face (non privé)                              |
 | togetherAI   | Non     | Utilise l'API Together AI (non privé)                     |
 | google       | Non     | Utilise l'API Google Gemini (non privé)                  |
+| modelscope  | Non     | API ModelScope (non privé)                              |
 
 Ensuite, exécutez avec le CLI ou l'interface graphique comme expliqué dans la section pour les fournisseurs locaux.
 
@@ -415,6 +416,7 @@ Le tableau ci-dessous montre les LLM providers disponibles :
 | deepseek-api  | No     | Utilise l'API Deepseek (pas privé) |
 | huggingface| No    | Utilise Hugging-Face (pas privé) |
 | together| No    | Utilise l'api Together AI |
+| modelscope| No    | Utilise ModelScope (pas privé) |
 
 Pour sélectionner un provider LLM, modifiez le config.ini :
 

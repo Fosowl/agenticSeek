@@ -458,6 +458,7 @@ stealth_mode = False
 | openai | 不可 | 使用 ChatGPT API（無法保證隱私）|
 | deepseek-api | 不可 | 使用 Deepseek API (無法保證隱私)|
 | huggingface | 不可 | 使用 Hugging-Face API (無法保證隱私)|
+| modelscope | 不可 | 使用 ModelScope API (無法保證隱私)|
 
 若要選擇框架，請變更 `config.ini` 文件：
 
