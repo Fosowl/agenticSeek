@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import axios from "axios";
 import "./App.css";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ResizableLayout } from "./components/ResizableLayout";
 import faviconPng from "./logo.png";
+import { useInterval } from "./hooks/useInterval";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:7777';
 console.log("Using backend URL:", BACKEND_URL);
-
 
 function App() {
   const [query, setQuery] = useState("");
@@ -21,6 +21,7 @@ function App() {
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
   const messagesEndRef = useRef(null);
+  const [isIntervalRunning, setIsIntervalRunning] = useState(false);
 
   const fetchLatestAnswer = useCallback(async () => {
     try {
@@ -57,14 +58,19 @@ function App() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      checkHealth();
-      fetchLatestAnswer();
-      fetchScreenshot();
-    }, 3000);
-    return () => clearInterval(intervalId);
-  }, [fetchLatestAnswer]);
+  useInterval(() => {
+    console.log("Fetching latest answer...", isIntervalRunning);
+    setIsIntervalRunning(true);
+    fetchLatestAnswer().finally(() => {
+      console.log("Latest answer fetched.", isIntervalRunning);
+      setIsIntervalRunning(false);
+    });
+  }, isIntervalRunning ? null : 3000);
+
+  useInterval(() => {
+    checkHealth();
+    fetchScreenshot();
+  }, 3000);
 
   const checkHealth = async () => {
     try {
@@ -400,8 +406,8 @@ function App() {
                     src={responseData?.screenshot || "placeholder.png"}
                     alt="Screenshot"
                     onError={(e) => {
-                      e.target.src = "placeholder.png";
-                      console.error("Failed to load screenshot");
+                      // e.target.src = "placeholder.png";
+                      // console.error("Failed to load screenshot");
                     }}
                     key={responseData?.screenshotTimestamp || "default"}
                   />
