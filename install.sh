@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SCRIPTS_DIR="scripts"
 LLM_ROUTER_DIR="llm_router"

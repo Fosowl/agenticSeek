@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Script to automate SearXNG setup and deployment with Docker Compose
 

@@ -19,7 +19,7 @@ toto.py
 
 You can execute bash command using the bash tag :
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 ls -la # exemple
 ```
 
