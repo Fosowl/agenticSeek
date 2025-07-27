@@ -2,6 +2,10 @@
 
 SCRIPTS_DIR="scripts"
 LLM_ROUTER_DIR="llm_router"
+IS_LOCAL=$(grep "^is_local" config.ini | cut -d'=' -f2 | xargs)
+PROVIDER=$(grep "^provider_name" config.ini | cut -d'=' -f2 | xargs)
+MODEL=$(grep "^provider_model" config.ini | cut -d'=' -f2 | xargs)
+
 
 echo "Detecting operating system..."
 
@@ -19,6 +23,10 @@ case "$OS_TYPE" in
             echo "Error: $SCRIPTS_DIR/linux_install.sh not found!"
             exit 1
         fi
+	if [ "$IS_LOCAL" = "True" ] && [ "$PROVIDER" = "ollama" ]; then
+	    echo "Create ollama image with $MODEL model"
+	    bash "$SCRIPTS_DIR/ollama_install.sh" "$MODEL"
+	fi
         ;;
     "Darwin"*)
         echo "Detected macOS"

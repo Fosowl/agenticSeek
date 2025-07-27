@@ -130,6 +130,15 @@ if [ "$1" = "full" ]; then
         echo "Possible fixes: Run with sudo or ensure port 8080 is free."
         exit 1
     fi
+    IS_LOCAL=$(grep "^is_local" config.ini | cut -d'=' -f2 | xargs)
+    PROVIDER_NAME=$(grep "^provider_name" config.ini | cut -d'=' -f2 | xargs)
+
+    if [ "$IS_LOCAL" = "True" ] && \
+       [ "$PROVIDER_NAME" = "ollama" ] && \
+       docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^ollama-with-model:latest$"; then
+	echo "Starting ollama service"
+	$COMPOSE_CMD up -d ollama
+    fi
 else
     if ! $COMPOSE_CMD --profile core up; then
         echo "Error: Failed to start containers. Check Docker logs with '$COMPOSE_CMD logs'."

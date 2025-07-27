@@ -69,6 +69,16 @@ services:
     networks:
       - agentic-seek-net
 
+  ollama:
+    container_name: ollama
+    image: ollama-with-model
+#    expose:
+#      - ${OLLAMA_PORT:-11434}
+    ports:
+      - ${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}
+    networks:
+      - agentic-seek-net
+
   backend:
     container_name: backend
     profiles: ["backend", "full"]
@@ -77,7 +87,7 @@ services:
       dockerfile: Dockerfile.backend
     ports:
       - ${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
-      - ${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}
+#      - ${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}
       - ${LM_STUDIO_PORT:-1234}:${LM_STUDIO_PORT:-1234}
       - ${CUSTOM_ADDITIONAL_LLM_PORT:-8000}:${CUSTOM_ADDITIONAL_LLM_PORT:-8000}
     volumes:
