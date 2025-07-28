@@ -1,102 +1,100 @@
+# Use a specific Python slim base image for reproducibility and reduced size
+FROM --platform=linux/amd64 python:3.11.9-slim
 
-FROM --platform=linux/amd64 python:3.11-slim
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables for non-interactive builds and Python optimizations
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    CHROME_TESTING_VERSION=134.0.6998.88 \
+    DISPLAY=:99
 
-# Install essential packages and Chrome dependencies
-RUN apt-get update -y && apt-get install -y \
+# Set working directory for application
+WORKDIR /app
+
+# Install essential packages and Chrome dependencies in a single layer
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
     wget \
     gnupg2 \
     ca-certificates \
     unzip \
     xvfb \
-    libxss1 \
-    libappindicator1 \
     fonts-liberation \
-    libnss3 \
-    libatk1.0-0 \
+    libasound2 \
     libatk-bridge2.0-0 \
+    libatk1.0-0 \
     libcups2 \
     libdrm2 \
+    libgtk-4-1 \
+    libnss3 \
     libxcomposite1 \
     libxdamage1 \
     libxrandr2 \
+    libxss1 \
     xdg-utils \
-    dbus \
-    && rm -rf /var/lib/apt/lists/*
+    alsa-utils \
+    gcc \
+    g++ \
+    gfortran \
+    libportaudio2 \
+    portaudio19-dev \
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* # Clean up to reduce image size
 
-RUN apt-get update -y && \
-      apt-get install -y \
-      gcc \
-      g++ \
-      gfortran \
-      libportaudio2 \
-      portaudio19-dev \
-      ffmpeg \
-      libavcodec-dev \
-      libavformat-dev \
-      libavutil-dev \
-      gnupg2 \
-      wget \
-      unzip \
-      python3 \
-      python3-pip \
-      libasound2 \
-      libatk-bridge2.0-0 \
-      libgtk-4-1 \
-      libnss3 \
-      xdg-utils \
-      wget \
-    && rm -rf /var/lib/apt/lists/*
-
-
-RUN apt-get update -y && \
-apt-get install -y \
-  alsa-utils \
-&& rm -rf /var/lib/apt/lists/*
-
-ENV CHROME_TESTING_VERSION=134.0.6998.88
-ENV DISPLAY=:99
-
-WORKDIR /app
-
+# Install Google Chrome
 RUN set -eux; \
     wget -qO /tmp/chrome.zip \
-      "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_TESTING_VERSION}/linux64/chrome-linux64.zip"; \
-    unzip -q /tmp/chrome.zip -d /opt; \
-    rm /tmp/chrome.zip; \
-    ln -s /opt/chrome-linux64/chrome /usr/local/bin/google-chrome; \
-    ln -s /opt/chrome-linux64/chrome /usr/local/bin/chrome; \
-    mkdir -p /opt/chrome; \
-    ln -s /opt/chrome-linux64/chrome /opt/chrome/chrome; \
-    google-chrome --version
+      "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_TESTING_VERSION}/linux64/chrome-linux64.zip" && \
+    unzip -q /tmp/chrome.zip -d /opt && \
+    rm /tmp/chrome.zip && \
+    ln -sf /opt/chrome-linux64/chrome /usr/local/bin/google-chrome && \
+    ln -sf /opt/chrome-linux64/chrome /usr/local/bin/chrome && \
+    ln -sf /opt/chrome-linux64/chrome /opt/chrome/chrome && \
+    chmod +x /opt/chrome-linux64/chrome && \
+    google-chrome --version # Verify Chrome installation
 
+# Install Chromedriver
 RUN set -eux; \
     wget -qO /tmp/chromedriver.zip \
-      "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_TESTING_VERSION}/linux64/chromedriver-linux64.zip"; \
-    unzip -q /tmp/chromedriver.zip -d /tmp; \
-    mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin; \
-    rm /tmp/chromedriver.zip; \
-    chmod +x /usr/local/bin/chromedriver; \
-    chromedriver --version
+      "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_TESTING_VERSION}/linux64/chromedriver-linux64.zip" && \
+    unzip -q /tmp/chromedriver.zip -d /tmp && \
+    mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
+    rm -rf /tmp/chromedriver* && \
+    chmod +x /usr/local/bin/chromedriver && \
+    chromedriver --version # Verify Chromedriver installation
 
-RUN chmod +x /opt/chrome/chrome
-
-RUN pip3 install --upgrade pip setuptools wheel
-
+# Upgrade pip and install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt # Install project dependencies
 
-RUN mkdir -p /opt/workspace
-RUN mkdir -p /tmp && chmod 1777 /tmp
+# Create workspace and temporary directories with proper permissions
+RUN mkdir -p /opt/workspace /tmp && \
+    chmod 1777 /tmp && \
+    chmod 755 /opt/workspace
 
-# Copy application code
+# Copy application code and configuration
 COPY api.py .
+COPY config.ini .
 COPY sources/ ./sources/
 COPY prompts/ ./prompts/
-COPY crx/ crx/
-COPY llm_router/ llm_router/
-COPY config.ini .
+COPY crx/ ./crx/
+COPY llm_router/ ./llm_router/
 
+# Create non-root user for enhanced security
+ARG USER_ID=1000
+RUN useradd -m -u ${USER_ID} -s /bin/bash appuser && \
+    chown -R appuser:appuser /app /opt/workspace # Set ownership for app directories
+USER appuser # Switch to non-root user
+
+# Add healthcheck to monitor application status
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Expose port for the application
 EXPOSE 8000
 
 # Run the application
