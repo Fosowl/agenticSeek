@@ -215,7 +215,7 @@ Refer to the [List of API Providers](#list-of-api-providers) below. Visit their 
 ```ini
 [MAIN]
 is_local = False
-provider_name = openai # Or google, deepseek, togetherAI, huggingface
+provider_name = openai # Or google, deepseek, togetherAI, huggingface, openrouter
 provider_model = gpt-3.5-turbo # Or gemini-1.5-flash, deepseek-chat, mistralai/Mixtral-8x7B-Instruct-v0.1 etc.
 provider_server_address = # Typically ignored or can be left blank when is_local = False for most APIs
 # ... other settings ...
@@ -231,6 +231,7 @@ provider_server_address = # Typically ignored or can be left blank when is_local
 | Deepseek     | `deepseek`      | No     | Use Deepseek models via their API.                | [platform.deepseek.com](https://platform.deepseek.com) |
 | Hugging Face | `huggingface`   | No     | Use models from Hugging Face Inference API.       | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | TogetherAI   | `togetherAI`    | No     | Use various open-source models via TogetherAI API.| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
+|| OpenRouter   | `openrouter`    | No     | Access multiple AI models through a single unified API.| [openrouter.ai/keys](https://openrouter.ai/keys) |
 
 *Note:*
 *   We advise against using `gpt-4o` or other OpenAI models for complex web browsing and task planning as current prompt optimizations are geared towards models like Deepseek.
