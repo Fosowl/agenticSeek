@@ -1,0 +1,14 @@
+[llm]
+provider_name = "gemini"
+provider_model = "gemini-1.5-pro"
+use_local_models = false
+
+[browser]
+headless = true
+stealth_mode = false
+chrome_path = "/usr/bin/chromium"
+chrome_args = "--no-sandbox --disable-dev-shm-usage --disable-gpu"
+profile_use = false
+
+[search]
+searxng_base_url = "https://searxng.nicfab.eu"
