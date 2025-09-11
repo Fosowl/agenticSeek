@@ -23,18 +23,6 @@ services:
     networks:
       - agentic-seek-net
 
-  ollama:
-    container_name: ollama
-    profiles: ["core", "full"]
-    image: ollama/ollama
-    restart: unless-stopped
-    ports:
-      - ${OLLAMA_PORT:-11434}:11434
-    volumes:
-      - ollama-data:/root/.ollama
-    networks:
-      - agentic-seek-net
-
   searxng:
     container_name: searxng
     profiles: ["core", "full"]
@@ -110,7 +98,6 @@ services:
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
       - DSK_DEEPSEEK_API_KEY=${DSK_DEEPSEEK_API_KEY}
     depends_on:
-      - ollama
       - redis
       - searxng
     networks:
@@ -120,7 +107,6 @@ services:
 
 volumes:
   redis-data:
-  ollama-data:
   chrome_profiles:
 
 networks:
