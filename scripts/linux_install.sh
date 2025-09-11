@@ -22,7 +22,6 @@ sudo apt-get install -y \
     python3-pyaudio \
     libgtk-3-dev \
     libnotify-dev \
-    libgconf-2-4 \
     libnss3 \
     libxss1 || { echo "Failed to install packages"; exit 1; }
 

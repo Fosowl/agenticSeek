@@ -23,13 +23,25 @@ services:
     networks:
       - agentic-seek-net
 
+  ollama:
+    container_name: ollama
+    profiles: ["core", "full"]
+    image: ollama/ollama
+    restart: unless-stopped
+    ports:
+      - ${OLLAMA_PORT:-11434}:11434
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - agentic-seek-net
+
   searxng:
     container_name: searxng
     profiles: ["core", "full"]
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${SEARXNG_PORT:-8080}:8080"
     volumes:
       - ./searxng:/etc/searxng:rw,z
     environment:
@@ -58,14 +70,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.frontend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     volumes:
       - ./frontend/agentic-seek-front/src:/app/src:rw,z
       - ./screenshots:/app/screenshots
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_BACKEND_URL=http://localhost:7777
+      - REACT_APP_BACKEND_URL=http://backend:${BACKEND_PORT:-7777}
     networks:
       - agentic-seek-net
 
@@ -77,7 +89,6 @@ services:
       dockerfile: Dockerfile.backend
     ports:
       - ${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
-      - ${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}
       - ${LM_STUDIO_PORT:-1234}:${LM_STUDIO_PORT:-1234}
       - ${CUSTOM_ADDITIONAL_LLM_PORT:-8000}:${CUSTOM_ADDITIONAL_LLM_PORT:-8000}
     volumes:
@@ -98,13 +109,18 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
       - DSK_DEEPSEEK_API_KEY=${DSK_DEEPSEEK_API_KEY}
+    depends_on:
+      - ollama
+      - redis
+      - searxng
     networks:
       - agentic-seek-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
-  
+
 volumes:
   redis-data:
+  ollama-data:
   chrome_profiles:
 
 networks:
