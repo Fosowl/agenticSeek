@@ -6,14 +6,17 @@ import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add project root to Python path
 from sources.memory import Memory
+from sources.llm_provider import Provider
 
 class TestMemory(unittest.TestCase):
     def setUp(self):
         self.system_prompt = "Test system prompt"
+        self.provider = Provider("test", "test")
         self.memory = Memory(
             system_prompt=self.system_prompt,
             recover_last_session=False,
-            memory_compression=False
+            memory_compression=False,
+            model_provider=self.provider.model
         )
 
     def tearDown(self):
@@ -84,7 +87,7 @@ class TestMemory(unittest.TestCase):
         self.memory.push("assistant", "Hi")
         self.memory.save_memory()
         
-        new_memory = Memory(self.system_prompt, recover_last_session=True)
+        new_memory = Memory(self.system_prompt, recover_last_session=True, memory_compression=True, model_provider=self.provider.model)
         new_memory.load_memory()
         self.assertEqual(len(new_memory.memory), 3)  # System + messages
         self.assertEqual(new_memory.memory[1]['content'], "Hello")
