@@ -9,7 +9,7 @@ class TestBrowserAgentParsing(unittest.TestCase):
         # Initialize a basic BrowserAgent instance for testing
         self.agent = BrowserAgent(
             name="TestAgent",
-            prompt_path="../prompts/base/browser_agent.txt",
+            prompt_path="prompts/base/browser_agent.txt",
             provider=None
         )
 
