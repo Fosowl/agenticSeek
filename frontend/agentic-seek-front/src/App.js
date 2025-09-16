@@ -19,47 +19,18 @@ function App() {
         const intervalId = setInterval(() => {
             checkHealth();
             fetchLatestAnswer();
-            fetchScreenshot();
         }, 3000);
         return () => clearInterval(intervalId);
     }, [messages]);
 
     const checkHealth = async () => {
         try {
-            await axios.get('http://127.0.0.1:8000/health');
+            await axios.get('/api/health');
             setIsOnline(true);
             console.log('System is online');
         } catch {
             setIsOnline(false);
             console.log('System is offline');
-        }
-    };
-
-    const fetchScreenshot = async () => {
-        try {
-            const timestamp = new Date().getTime();
-            const res = await axios.get(`http://127.0.0.1:8000/screenshots/updated_screen.png?timestamp=${timestamp}`, {
-                responseType: 'blob'
-            });
-            console.log('Screenshot fetched successfully');
-            const imageUrl = URL.createObjectURL(res.data);
-            setResponseData((prev) => {
-                if (prev?.screenshot && prev.screenshot !== 'placeholder.png') {
-                    URL.revokeObjectURL(prev.screenshot);
-                }
-                return {
-                    ...prev,
-                    screenshot: imageUrl,
-                    screenshotTimestamp: new Date().getTime()
-                };
-            });
-        } catch (err) {
-            console.error('Error fetching screenshot:', err);
-            setResponseData((prev) => ({
-                ...prev,
-                screenshot: 'placeholder.png',
-                screenshotTimestamp: new Date().getTime()
-            }));
         }
     };
 
@@ -77,7 +48,7 @@ function App() {
 
     const fetchLatestAnswer = async () => {
         try {
-            const res = await axios.get('http://127.0.0.1:8000/latest_answer');
+            const res = await axios.get('/api/latest_answer');
             const data = res.data;
 
             updateData(data);
@@ -128,7 +99,7 @@ function App() {
         setIsLoading(false);
         setError(null);
         try {
-            const res = await axios.get('http://127.0.0.1:8000/stop');
+            const res = await axios.get('/api/stop');
             setStatus("Requesting stop...");
         } catch (err) {
             console.error('Error stopping the agent:', err);
@@ -149,7 +120,7 @@ function App() {
         try {
             console.log('Sending query:', query);
             setQuery('waiting for response...');
-            const res = await axios.post('http://127.0.0.1:8000/query', {
+            const res = await axios.post('/api/query', {
                 query,
                 tts_enabled: false
             });
@@ -168,14 +139,6 @@ function App() {
             console.log('Query completed');
             setIsLoading(false);
             setQuery('');
-        }
-    };
-
-    const handleGetScreenshot = async () => {
-        try {
-            setCurrentView('screenshot');
-        } catch (err) {
-            setError('Browser not in use');
         }
     };
 
@@ -243,10 +206,10 @@ function App() {
                                 Editor View
                             </button>
                             <button
-                                className={currentView === 'screenshot' ? 'active' : ''}
-                                onClick={responseData?.screenshot ? () => setCurrentView('screenshot') : handleGetScreenshot}
+                                className={'active'}
+                                disabled={true}
                             >
-                                Browser View
+                                Browser View (Disabled)
                             </button>
                             <button
                                 className={currentView === 'thinking' ? 'active' : ''}
@@ -309,13 +272,13 @@ function App() {
                             ) : (
                                 <div className="screenshot">
                                     <img
-                                        src={responseData?.screenshot || 'placeholder.png'}
+                                        src={'placeholder.png'}
                                         alt="Screenshot"
                                         onError={(e) => {
                                             e.target.src = 'placeholder.png';
                                             console.error('Failed to load screenshot');
                                         }}
-                                        key={responseData?.screenshotTimestamp || 'default'}
+                                        key={'default'}
                                     />
                                 </div>
                             )}

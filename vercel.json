@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "frontend/agentic-seek-front/package.json",
+      "use": "@vercel/static-build",
+      "options": {
+        "cwd": "frontend/agentic-seek-front",
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/api/.*",
+      "dest": "api.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/agentic-seek-front/build/index.html"
+    }
+  ]
+}

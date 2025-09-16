@@ -2,70 +2,55 @@
 
 import os, sys
 import uvicorn
-import aiofiles
-import configparser
 import asyncio
 import time
 from typing import List
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import uuid
 
 from sources.llm_provider import Provider
 from sources.interaction import Interaction
-from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
-from sources.browser import Browser, create_driver
+from sources.agents import CasualAgent, CoderAgent, FileAgent
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
 
-
-from celery import Celery
-
 api = FastAPI(title="AgenticSeek API", version="0.1.0")
-celery_app = Celery("tasks", broker="redis://localhost:6379/0", backend="redis://localhost:6379/0")
-celery_app.conf.update(task_track_started=True)
 logger = Logger("backend.log")
-config = configparser.ConfigParser()
-config.read('config.ini')
 
+# Vercel will handle CORS, but this is good for local testing
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://localhost:3000"],
+    allow_origins=["http://localhost", "http://localhost:3000", "https://*.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-if not os.path.exists(".screenshots"):
-    os.makedirs(".screenshots")
-api.mount("/screenshots", StaticFiles(directory=".screenshots"), name="screenshots")
+# Filesystem operations removed for Vercel compatibility
 
 def initialize_system():
-    stealth_mode = config.getboolean('BROWSER', 'stealth_mode')
-    personality_folder = "jarvis" if config.getboolean('MAIN', 'jarvis_personality') else "base"
-    languages = config["MAIN"]["languages"].split(' ')
+    # Replaced config.ini with environment variables for Vercel deployment
+    personality_folder = "jarvis" if os.environ.get('JARVIS_PERSONALITY', 'false').lower() == 'true' else "base"
+    languages = os.environ.get('LANGUAGES', 'en').split(' ')
 
+    # For Vercel, we must use a remote provider. IS_LOCAL must be False.
     provider = Provider(
-        provider_name=config["MAIN"]["provider_name"],
-        model=config["MAIN"]["provider_model"],
-        server_address=config["MAIN"]["provider_server_address"],
-        is_local=config.getboolean('MAIN', 'is_local')
+        provider_name=os.environ.get("PROVIDER_NAME", "google"),
+        model=os.environ.get("PROVIDER_MODEL", "gemini-1.5-flash"),
+        server_address=os.environ.get("PROVIDER_SERVER_ADDRESS"), # Not used for most remote providers
+        is_local=os.environ.get('IS_LOCAL', 'false').lower() == 'true'
     )
     logger.info(f"Provider initialized: {provider.provider_name} ({provider.model})")
 
-    browser = Browser(
-        create_driver(headless=config.getboolean('BROWSER', 'headless_browser'), stealth_mode=stealth_mode, lang=languages[0]),
-        anticaptcha_manual_install=stealth_mode
-    )
-    logger.info("Browser initialized")
+    # Browser functionality is removed for Vercel compatibility
 
+    # BrowserAgent and PlannerAgent are removed as they require a browser
     agents = [
         CasualAgent(
-            name=config["MAIN"]["agent_name"],
+            name=os.environ.get("AGENT_NAME", "AgenticSeek"),
             prompt_path=f"prompts/{personality_folder}/casual_agent.txt",
             provider=provider, verbose=False
         ),
@@ -79,24 +64,15 @@ def initialize_system():
             prompt_path=f"prompts/{personality_folder}/file_agent.txt",
             provider=provider, verbose=False
         ),
-        BrowserAgent(
-            name="Browser",
-            prompt_path=f"prompts/{personality_folder}/browser_agent.txt",
-            provider=provider, verbose=False, browser=browser
-        ),
-        PlannerAgent(
-            name="Planner",
-            prompt_path=f"prompts/{personality_folder}/planner_agent.txt",
-            provider=provider, verbose=False, browser=browser
-        )
     ]
     logger.info("Agents initialized")
 
     interaction = Interaction(
         agents,
-        tts_enabled=config.getboolean('MAIN', 'speak'),
-        stt_enabled=config.getboolean('MAIN', 'listen'),
-        recover_last_session=config.getboolean('MAIN', 'recover_last_session'),
+        tts_enabled=os.environ.get('SPEAK', 'false').lower() == 'true',
+        stt_enabled=os.environ.get('LISTEN', 'false').lower() == 'true',
+        # Session recovery disabled for ephemeral filesystem
+        recover_last_session=False,
         langs=languages
     )
     logger.info("Interaction initialized")
@@ -104,37 +80,34 @@ def initialize_system():
 
 interaction = initialize_system()
 is_generating = False
-query_resp_history = []
+query_resp_history = [] # This will reset with each invocation on serverless
 
-@api.get("/screenshot")
-async def get_screenshot():
-    logger.info("Screenshot endpoint called")
-    screenshot_path = ".screenshots/updated_screen.png"
-    if os.path.exists(screenshot_path):
-        return FileResponse(screenshot_path)
-    logger.error("No screenshot available")
-    return JSONResponse(
-        status_code=404,
-        content={"error": "No screenshot available"}
-    )
+# Screenshot endpoint removed for Vercel compatibility
 
-@api.get("/health")
+@api.get("/")
 async def health_check():
+    logger.info("Health check endpoint called")
+    # The root of the API should handle this for Vercel
+    return {"status": "healthy", "version": "0.1.0"}
+
+# This is the entry point Vercel will use
+@api.get("/api/health")
+async def health_check_api():
     logger.info("Health check endpoint called")
     return {"status": "healthy", "version": "0.1.0"}
 
-@api.get("/is_active")
+@api.get("/api/is_active")
 async def is_active():
     logger.info("Is active endpoint called")
     return {"is_active": interaction.is_active}
 
-@api.get("/stop")
+@api.get("/api/stop")
 async def stop():
     logger.info("Stop endpoint called")
     interaction.current_agent.request_stop()
     return JSONResponse(status_code=200, content={"status": "stopped"})
 
-@api.get("/latest_answer")
+@api.get("/api/latest_answer")
 async def get_latest_answer():
     global query_resp_history
     if interaction.current_agent is None:
@@ -180,7 +153,7 @@ async def think_wrapper(interaction, query):
         interaction.last_success = False
         raise e
 
-@api.post("/query", response_model=QueryResponse)
+@api.post("/api/query", response_model=QueryResponse)
 async def process_query(request: QueryRequest):
     global is_generating, query_resp_history
     logger.info(f"Processing query: {request.query}")
@@ -240,11 +213,15 @@ async def process_query(request: QueryRequest):
         return JSONResponse(status_code=200, content=query_resp.jsonify())
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
-        sys.exit(1)
+        # sys.exit(1) is not ideal for serverless functions
+        return JSONResponse(status_code=500, content={"error": f"An unexpected error occurred: {str(e)}"})
     finally:
         logger.info("Processing finished")
-        if config.getboolean('MAIN', 'save_session'):
-            interaction.save_session()
+        # Session saving is disabled for Vercel's ephemeral filesystem
+        # if os.environ.get('SAVE_SESSION', 'false').lower() == 'true':
+        #     interaction.save_session()
 
+# The main block is not used on Vercel but good for local testing
 if __name__ == "__main__":
+    # For local testing, you would need to set environment variables
     uvicorn.run(api, host="0.0.0.0", port=8000)
