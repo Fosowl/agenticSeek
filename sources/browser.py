@@ -9,6 +9,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from typing import List, Tuple, Type, Dict
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+from urllib3.exceptions import ReadTimeoutError
 from fake_useragent import UserAgent
 from selenium_stealth import stealth
 import undetected_chromedriver as uc
@@ -330,6 +331,9 @@ class Browser:
             return False
         except WebDriverException as e:
             self.logger.error(f"Error navigating to {url}: {str(e)}")
+            return False
+        except ReadTimeoutError as e:
+            self.logger.error(f"Timeout waiting for response from {url} to load: {str(e)}")
             return False
         except Exception as e:
             self.logger.error(f"Fatal error with go_to method on {url}:\n{str(e)}")
