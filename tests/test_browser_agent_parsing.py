@@ -1,15 +1,23 @@
 import unittest
+from unittest.mock import MagicMock, patch
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add project root to Python path
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from sources.agents.browser_agent import BrowserAgent
 
 class TestBrowserAgentParsing(unittest.TestCase):
-    def setUp(self):
-        # Initialize a basic BrowserAgent instance for testing
+    @patch('sources.agents.browser_agent.searxSearch')
+    def setUp(self, mock_searx_search):
+        # Create a mock instance of searxSearch
+        self.mock_searx_instance = MagicMock()
+        mock_searx_search.return_value = self.mock_searx_instance
+
+        # Initialize BrowserAgent with the mocked dependency
         self.agent = BrowserAgent(
             name="TestAgent",
-            prompt_path="../prompts/base/browser_agent.txt",
+            prompt_path=os.path.join(os.path.dirname(__file__), '..', 'prompts', 'base', 'browser_agent.txt'),
             provider=None
         )
 

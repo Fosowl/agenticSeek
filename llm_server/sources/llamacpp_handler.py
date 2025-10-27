@@ -1,9 +1,8 @@
-
-from .generator import GeneratorLLM
+from llm_server.utils.generator import BaseGenerator
 from llama_cpp import Llama
-from .decorator import timer_decorator
+from llm_server.utils.decorators import timer_decorator, manage_generation_state
 
-class LlamacppLLM(GeneratorLLM):
+class LlamacppLLM(BaseGenerator):
 
     def __init__(self):
         """
@@ -13,6 +12,7 @@ class LlamacppLLM(GeneratorLLM):
         self.llm = None
     
     @timer_decorator
+    @manage_generation_state
     def generate(self, history):
         if self.llm is None:
             self.logger.info(f"Loading {self.model}...")
@@ -23,18 +23,9 @@ class LlamacppLLM(GeneratorLLM):
                 verbose=True
             )
         self.logger.info(f"Using {self.model} for generation with Llama.cpp")
-        try:
-            with self.state.lock:
-                self.state.is_generating = True
-                self.state.last_complete_sentence = ""
-                self.state.current_buffer = ""
-            output = self.llm.create_chat_completion(
-                  messages = history
-            )
-            with self.state.lock:
-                self.state.current_buffer = output['choices'][0]['message']['content']
-        except Exception as e:
-            self.logger.error(f"Error: {e}")
-        finally:
-            with self.state.lock:
-                self.state.is_generating = False
+
+        output = self.llm.create_chat_completion(
+                messages = history
+        )
+        with self.state.lock:
+            self.state.current_buffer = output['choices'][0]['message']['content']
