@@ -2,27 +2,8 @@ version: '3.8'
 
 services:
   redis:
-    container_name: redis
-    profiles: ["core", "full"]
-    image: docker.io/valkey/valkey:8-alpine
-    command: valkey-server --save 30 1 --loglevel warning
-    restart: unless-stopped
-    volumes:
-      - redis-data:/data
-    cap_drop:
-      - ALL
-    cap_add:
-      - SETGID
-      - SETUID
-      - DAC_OVERRIDE
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "1m"
-        max-file: "1"
-    networks:
-      - agentic-seek-net
-
+      - no-new-privileges:true
+    security_opt:
   searxng:
     container_name: searxng
     profiles: ["core", "full"]
