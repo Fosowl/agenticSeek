@@ -1,16 +1,32 @@
-FROM node:18
+FROM node:18-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
-COPY agentic-seek-front/package.json agentic-seek-front/package-lock.json ./
-RUN npm install
+# Install system dependencies needed for building native modules
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    && rm -rf /var/cache/apk/*
 
-# Copy application code
-COPY agentic-seek-front/ .
+# Set npm configuration to avoid peer dependency issues
+ENV npm_config_legacy_peer_deps=true
+ENV NODE_ENV=development
+ENV CHOKIDAR_USEPOLLING=true
+
+# Copy package files
+COPY agentic-seek-front/package*.json ./
+
+# Install dependencies with verbose logging for debugging
+RUN npm install --verbose
+
+# Copy source code
+COPY agentic-seek-front/ ./
 
 # Expose port
 EXPOSE 3000
 
-# Run the application
+# Start the development server
 CMD ["npm", "start"]
