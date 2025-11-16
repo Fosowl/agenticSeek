@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY agentic-seek-front/package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY agentic-seek-front/src ./src
+COPY agentic-seek-front/public ./public
+
+# Expose port
+EXPOSE 3000
+
+# Start the development server
+CMD ["npm", "start"]
