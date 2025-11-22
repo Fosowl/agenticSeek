@@ -1,5 +1,5 @@
 
-FROM --platform=linux/amd64 python:3.11-slim
+FROM --platform=linux/amd64 python:3.11.12
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install essential packages and Chrome dependencies
