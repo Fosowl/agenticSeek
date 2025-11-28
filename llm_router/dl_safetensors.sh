@@ -5,7 +5,7 @@
 # Therefore, I put all the files in llm_router and download the model file with this script, If you know a better way please raise an issue
 #########
 
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Define the URL and filename
 URL="https://huggingface.co/adaptive-classifier/llm-router/resolve/main/model.safetensors"
