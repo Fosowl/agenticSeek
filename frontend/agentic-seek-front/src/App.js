@@ -26,6 +26,7 @@ function App() {
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
   const messagesEndRef = useRef(null);
+  const [browserSnapshot, setBrowserSnapshot] = useState({ html: "", url: "" });
 
   const fetchLatestAnswer = useCallback(async () => {
     try {
@@ -70,13 +71,13 @@ function App() {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-        if (!IS_STANDALONE) {
+        if (IS_STANDALONE) {
+            fetchBrowserSnapshot();
+            setIsOnline(true);
+        } else {
             checkHealth();
             fetchLatestAnswer();
-            fetchScreenshot();
-        } else {
-             // In standalone, just check health once or skip
-             setIsOnline(true);
+            fetchScreenshot(); // Legacy for non-standalone
         }
     }, 3000);
     return () => clearInterval(intervalId);
@@ -95,6 +96,25 @@ function App() {
       setIsOnline(false);
       console.log("System is offline");
     }
+  };
+
+  const fetchBrowserSnapshot = async () => {
+      try {
+          const res = await StandaloneBackend.get(`${BACKEND_URL}/browser_snapshot`);
+          const { html, url, timestamp } = res.data;
+
+          if (html && html !== browserSnapshot.html) {
+             setBrowserSnapshot({ html, url, timestamp });
+             // Only switch view if we haven't manually done so, or maybe just notify?
+             // For now, let's just update the state.
+             setResponseData(prev => ({
+                 ...prev,
+                 hasBrowserContent: true
+             }));
+          }
+      } catch (err) {
+          console.error("Error fetching browser snapshot:", err);
+      }
   };
 
   const fetchScreenshot = async () => {
@@ -442,7 +462,7 @@ function App() {
               <button
                 className={currentView === "screenshot" ? "active" : ""}
                 onClick={
-                  responseData?.screenshot
+                  responseData?.screenshot || responseData?.hasBrowserContent
                     ? () => setCurrentView("screenshot")
                     : handleGetScreenshot
                 }
@@ -480,15 +500,30 @@ function App() {
                 </div>
               ) : (
                 <div className="screenshot">
-                  <img
-                    src={responseData?.screenshot || "placeholder.png"}
-                    alt="Screenshot"
-                    onError={(e) => {
-                      e.target.src = "placeholder.png";
-                      console.error("Failed to load screenshot");
-                    }}
-                    key={responseData?.screenshotTimestamp || "default"}
-                  />
+                  {IS_STANDALONE ? (
+                      browserSnapshot.html ? (
+                          <iframe
+                              title="Browser View"
+                              srcDoc={browserSnapshot.html}
+                              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: 'white' }}
+                              sandbox="allow-scripts"
+                          />
+                      ) : (
+                          <div style={{color: 'var(--text-color)', padding: '20px'}}>
+                              Waiting for browser activity...
+                          </div>
+                      )
+                  ) : (
+                      <img
+                        src={responseData?.screenshot || "placeholder.png"}
+                        alt="Screenshot"
+                        onError={(e) => {
+                          e.target.src = "placeholder.png";
+                          console.error("Failed to load screenshot");
+                        }}
+                        key={responseData?.screenshotTimestamp || "default"}
+                      />
+                  )}
                 </div>
               )}
             </div>

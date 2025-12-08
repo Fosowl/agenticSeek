@@ -1,4 +1,5 @@
 import { agentManager } from './AgentManager';
+import { browserState } from './BrowserState';
 
 // Simulates the axios calls but routes them to local AgentManager
 const StandaloneBackend = {
@@ -24,11 +25,13 @@ const StandaloneBackend = {
         if (url.endsWith('stop')) {
             return { data: { status: "stopped" } };
         }
-        // Mock screenshot
+        // Expose Browser Snapshot
+        if (url.includes('browser_snapshot')) {
+             return { data: browserState.getSnapshot() };
+        }
+        // Legacy screenshot support (can be removed or kept for compatibility)
         if (url.includes('screenshots')) {
-             // Return a blob of a placeholder
-             // For now we can throw error or return empty, App.js handles error
-             throw new Error("No screenshot in standalone");
+             throw new Error("Use browser_snapshot for standalone");
         }
         return { data: {} };
     }
