@@ -25,7 +25,7 @@ export class AgentManager {
         this.provider = new LLMProvider({
             provider: 'gemini',
             apiKey: this.apiKey,
-            model: "gemini-1.5-flash"
+            model: "gemini-2.0-flash"
         });
         this.currentAgent = new CasualAgent(this.provider);
     }
@@ -46,7 +46,7 @@ export class AgentManager {
         this.provider = new LLMProvider({
             provider: 'gemini',
             apiKey: this.apiKey,
-            model: "gemini-1.5-flash"
+            model: "gemini-2.0-flash"
         });
         // Logic to switch agents? For now default to Casual or Browser if keywords present
         this.currentAgent = new CasualAgent(this.provider);
