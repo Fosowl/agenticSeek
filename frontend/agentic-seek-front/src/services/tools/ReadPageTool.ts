@@ -1,4 +1,5 @@
 import { CapacitorHttp } from '@capacitor/core';
+import { browserState } from '../BrowserState';
 
 export class ReadPageTool {
 
@@ -20,6 +21,27 @@ export class ReadPageTool {
             }
 
             const html = response.data;
+
+            // Process HTML for display (Inject Base Tag)
+            let processedHtml = html;
+            const baseTag = `<base href="${url}" target="_blank">`;
+
+            // Robust injection logic
+            if (!/<base\s/i.test(processedHtml)) {
+                if (/<head\b/i.test(processedHtml)) {
+                    // Inject after <head ...>
+                    processedHtml = processedHtml.replace(/(<head\b[^>]*>)/i, `$1${baseTag}`);
+                } else if (/<html\b/i.test(processedHtml)) {
+                    // Inject after <html ...> if head missing
+                    processedHtml = processedHtml.replace(/(<html\b[^>]*>)/i, `$1<head>${baseTag}</head>`);
+                } else {
+                    // Prepend to content if even html missing (rare but possible partials)
+                    processedHtml = `<head>${baseTag}</head>${processedHtml}`;
+                }
+            }
+
+            // Update Browser State for UI
+            browserState.setPage(url, processedHtml);
 
             // Basic HTML text extraction using DOMParser (browser native)
             const parser = new DOMParser();
