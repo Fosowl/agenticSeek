@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_KEY = "AIzaSyCH78cTqVOKG1Z1go75SPGISfFU_ibDXNc";
+// This script expects the API key to be passed as an environment variable or argument.
+// Example: GEMINI_API_KEY=your_key npx ts-node debug_gemini.ts
+
+const API_KEY = process.env.GEMINI_API_KEY;
+
+if (!API_KEY) {
+    console.error("Error: GEMINI_API_KEY environment variable is not set.");
+    process.exit(1);
+}
 
 async function listModels() {
     console.log(`Listing available models...`);
