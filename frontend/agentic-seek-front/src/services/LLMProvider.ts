@@ -59,20 +59,33 @@ export class LLMProvider {
         // AgenticSeek usually starts with system then user.
 
         try {
-            const response = await axios.post(url, { contents });
+            return await this.makeRequestWithRetry(url, { contents }, verbose);
+        } catch (error) {
+            console.error("Gemini API Error:", error);
+            throw error;
+        }
+    }
 
-            const data = response.data as any;
-            if (data && data.candidates && data.candidates.length > 0) {
-                 const text = data.candidates[0].content.parts[0].text;
+    private async makeRequestWithRetry(url: string, data: any, verbose: boolean, retries = 3, delay = 1000): Promise<string> {
+        try {
+            const response = await axios.post(url, data);
+
+            const responseData = response.data as any;
+            if (responseData && responseData.candidates && responseData.candidates.length > 0) {
+                 const text = responseData.candidates[0].content.parts[0].text;
                  if (verbose) console.log("Gemini Response:", text);
                  return text;
             } else {
                 console.error("Gemini Empty Response:", response.data);
                 throw new Error("Empty response from Gemini");
             }
-
-        } catch (error) {
-            console.error("Gemini API Error:", error);
+        } catch (error: any) {
+            if (retries > 0 && error.response && error.response.status === 429) {
+                console.warn(`Gemini API 429 Rate Limit. Retrying in ${delay}ms... (Retries left: ${retries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                // Exponential backoff
+                return this.makeRequestWithRetry(url, data, verbose, retries - 1, delay * 2);
+            }
             throw error;
         }
     }
