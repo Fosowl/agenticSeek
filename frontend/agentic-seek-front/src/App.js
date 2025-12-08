@@ -5,12 +5,18 @@ import "./App.css";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ResizableLayout } from "./components/ResizableLayout";
 import faviconPng from "./logo.png";
+import StandaloneBackend from "./services/StandaloneBackend";
+import { agentManager } from "./services/AgentManager";
 
+const IS_STANDALONE = true; // Flag for standalone mode
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 console.log("Using backend URL:", BACKEND_URL);
 
 function App() {
   const [query, setQuery] = useState("");
+  const [apiKey, setApiKey] = useState(localStorage.getItem("GEMINI_API_KEY") || "");
+  const [searchApiKey, setSearchApiKey] = useState(localStorage.getItem("SEARCH_API_KEY") || "");
+  const [showSettings, setShowSettings] = useState(!localStorage.getItem("GEMINI_API_KEY") && IS_STANDALONE);
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,8 +29,14 @@ function App() {
 
   const fetchLatestAnswer = useCallback(async () => {
     try {
-      const res = await axios.get(`${BACKEND_URL}/latest_answer`);
-      const data = res.data;
+      let data;
+      if (IS_STANDALONE) {
+          const res = await StandaloneBackend.get(`${BACKEND_URL}/latest_answer`);
+          data = res.data;
+      } else {
+          const res = await axios.get(`${BACKEND_URL}/latest_answer`);
+          data = res.data;
+      }
 
       updateData(data);
       if (!data.answer || data.answer.trim() === "") {
@@ -58,16 +70,25 @@ function App() {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      checkHealth();
-      fetchLatestAnswer();
-      fetchScreenshot();
+        if (!IS_STANDALONE) {
+            checkHealth();
+            fetchLatestAnswer();
+            fetchScreenshot();
+        } else {
+             // In standalone, just check health once or skip
+             setIsOnline(true);
+        }
     }, 3000);
     return () => clearInterval(intervalId);
   }, [fetchLatestAnswer]);
 
   const checkHealth = async () => {
     try {
-      await axios.get(`${BACKEND_URL}/health`);
+      if (IS_STANDALONE) {
+          await StandaloneBackend.get(`${BACKEND_URL}/health`);
+      } else {
+          await axios.get(`${BACKEND_URL}/health`);
+      }
       setIsOnline(true);
       console.log("System is online");
     } catch {
@@ -77,6 +98,7 @@ function App() {
   };
 
   const fetchScreenshot = async () => {
+    if (IS_STANDALONE) return;
     try {
       const timestamp = new Date().getTime();
       const res = await axios.get(
@@ -149,12 +171,23 @@ function App() {
     setIsLoading(false);
     setError(null);
     try {
-      await axios.get(`${BACKEND_URL}/stop`);
+      if (IS_STANDALONE) {
+          await StandaloneBackend.get(`${BACKEND_URL}/stop`);
+      } else {
+          await axios.get(`${BACKEND_URL}/stop`);
+      }
       setStatus("Requesting stop...");
     } catch (err) {
       console.error("Error stopping the agent:", err);
     }
   };
+
+  const saveSettings = (e) => {
+      e.preventDefault();
+      agentManager.setApiKey(apiKey);
+      agentManager.setSearchApiKey(searchApiKey);
+      setShowSettings(false);
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -163,6 +196,12 @@ function App() {
       console.log("Empty query");
       return;
     }
+
+    if (IS_STANDALONE && !agentManager.hasApiKey()) {
+        setShowSettings(true);
+        return;
+    }
+
     setMessages((prev) => [...prev, { type: "user", content: query }]);
     setIsLoading(true);
     setError(null);
@@ -170,13 +209,37 @@ function App() {
     try {
       console.log("Sending query:", query);
       setQuery("waiting for response...");
-      const res = await axios.post(`${BACKEND_URL}/query`, {
-        query,
-        tts_enabled: false,
-      });
+
+      let data;
+      if (IS_STANDALONE) {
+          const res = await StandaloneBackend.post(`${BACKEND_URL}/query`, { query });
+          data = res.data;
+      } else {
+          const res = await axios.post(`${BACKEND_URL}/query`, {
+            query,
+            tts_enabled: false,
+          });
+          data = res.data;
+      }
+
       setQuery("Enter your query...");
-      console.log("Response:", res.data);
-      const data = res.data;
+      console.log("Response:", data);
+
+      // Standalone mode immediately returns the answer, so we update messages here
+      if (IS_STANDALONE) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "agent",
+              content: data.answer,
+              reasoning: data.reasoning,
+              agentName: data.agent_name,
+              status: data.status,
+              uid: data.uid,
+            },
+          ]);
+      }
+
       updateData(data);
     } catch (err) {
       console.error("Error:", err);
@@ -236,10 +299,32 @@ function App() {
           </a>
           <div>
             <ThemeToggle />
+            {IS_STANDALONE && <button onClick={() => setShowSettings(true)} style={{marginLeft: '10px'}}>⚙️</button>}
           </div>
         </div>
       </header>
       <main className="main">
+        {showSettings && (
+            <div className="settings-modal" style={{
+                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                backgroundColor: 'var(--bg-color)', padding: '20px', border: '1px solid var(--border-color)',
+                zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+                <h2>Settings</h2>
+                <form onSubmit={saveSettings}>
+                    <label>
+                        Gemini API Key:
+                        <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={{width: '100%', marginBottom: '10px'}} />
+                    </label>
+                    <label>
+                        Search API Key (Serper.dev):
+                        <input type="password" value={searchApiKey} onChange={(e) => setSearchApiKey(e.target.value)} style={{width: '100%', marginBottom: '10px'}} />
+                    </label>
+                    <button type="submit">Save</button>
+                    <button type="button" onClick={() => setShowSettings(false)} style={{marginLeft: '10px'}}>Cancel</button>
+                </form>
+            </div>
+        )}
         <ResizableLayout initialLeftWidth={50}>
           <div className="chat-section">
             <h2>Chat Interface</h2>
