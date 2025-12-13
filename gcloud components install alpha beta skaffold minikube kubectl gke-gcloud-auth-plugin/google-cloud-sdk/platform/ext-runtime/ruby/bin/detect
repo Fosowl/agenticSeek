@@ -1,0 +1,81 @@
+#!/usr/bin/python
+# Copyright 2016 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Ruby detection script.
+
+import glob
+import json
+import os
+import sys
+
+# HACK: Import a vendored gae_ext_runtime library until we have a better
+# solution.
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))), 'lib'))
+
+from gae_ext_runtime import comm
+
+def main(args):
+    if len(args) != 2:
+        print 'Invalid Usage: {} <source-root-directory>'.format(args[0])
+        return 1
+
+    directory = args[1]
+
+    # The directory is considered a Ruby application if any are true:
+    #  * The top-level directory contains a Gemfile
+    #  * The top-level directory contains a config.ru
+    #  * The top-level directory contains a file ending in .rb
+    gemfile = os.path.isfile(os.path.join(directory, 'Gemfile'))
+    configru = os.path.isfile(os.path.join(directory, 'config.ru'))
+    ruby_file = glob.glob(os.path.join(directory, '*.rb'))
+
+    if not gemfile and not configru and not ruby_file:
+        return 1
+
+    try:
+        with open(os.path.join(directory, '.ruby-version')) as f:
+          ruby_version = f.read().strip()
+    except IOError:
+        ruby_version = ''
+
+    config = comm.get_config()
+    appinfo = config.params.appinfo
+
+    if appinfo and appinfo.entrypoint:
+        entrypoint = appinfo.entrypoint
+    else:
+        default = 'bundle exec rackup -p $PORT'
+        prompt = ('This looks like a Ruby application. Please confirm the '
+                  'command to run as the entrypoint:')
+        # Currently query_user does not seem to return the default on empty
+        # response, so do the defaulting ourselves until that is fixed.
+        entrypoint = comm.query_user(prompt, default) or default
+
+    runtime_data = {
+        'ruby_version': ruby_version,
+        'entrypoint': entrypoint,
+    }
+    appinfo =  {
+        'runtime': 'custom' if config.params.custom else 'ruby',
+        'env': 'flex',
+        'entrypoint': entrypoint,
+    }
+    comm.send_runtime_params(runtime_data, appinfo=appinfo)
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

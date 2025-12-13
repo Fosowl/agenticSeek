@@ -1,0 +1,145 @@
+#!/usr/bin/python
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Language detection script.
+
+import json
+import os
+import re
+import sys
+import subprocess
+
+DEV_NULL = open(os.devnull, 'w')
+
+# Augment the path with our library directory.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(ROOT_DIR, 'lib'))
+
+import comm
+
+def asList(val):
+    """Returns the value if it is a list else returns a list with the value.
+    """
+    return val if isinstance(val, list) else [val]
+
+def main(args):
+
+    if len(args) != 2:
+        # If we're being called incorrectly, this probably isn't happening from a
+        # framework.
+        sys.stderr.write('Invalid Usage: %s <source-root-directory>' %
+                         sys.argv[0])
+        return 1
+
+    # Get the first argument, should be the source root directory.
+    path = args[1]
+
+    # Show failures in debug or error depending on whether nodejs has been
+    # explicitly specified.
+    config = comm.get_config()
+    if ((config.params.appinfo and config.params.appinfo.runtime) or
+        config.params.runtime):
+        log_detect_error = comm.error
+    else:
+        log_detect_error = comm.debug
+
+    comm.info('Checking for Node.js.')
+    package_json = os.path.join(path, 'package.json')
+    yarn_lock_name = 'yarn.lock'
+    yarn_lock = os.path.join(path, yarn_lock_name)
+    got_shrinkwrap = False
+
+    if not os.path.isfile(package_json):
+        comm.debug('node.js checker: No package.json file.')
+        got_package_json = False
+        got_scripts_start = False
+        node_version = None
+        use_yarn = False
+    else:
+        got_package_json = True
+        # If there's a package.json file, that's unusual enough that any
+        # errors should be surfaced to the user.
+        log_detect_error = comm.error
+
+        # Consider the yarn.lock file as present if and only if the yarn.lock
+        # file exists and is not specified as being skipped in app.yaml.
+        try:
+            raw_skip_files = config.params.appinfo.skip_files
+            skip_files = [] if raw_skip_files is None else asList(raw_skip_files)
+        except AttributeError:
+            # If the skip_file attribute or any other parent attribute
+            # does not exist, treat the skip_files as not user specified.
+            skip_files = []
+
+        yarn_lock_exists = os.path.isfile(yarn_lock)
+        yarn_lock_skipped = False
+        for pattern in skip_files:
+            if re.match(pattern, yarn_lock_name) is not None:
+                yarn_lock_skipped = True
+                break;
+
+        use_yarn = yarn_lock_exists and not yarn_lock_skipped
+
+        # Try to read the package.json file.
+        try:
+            with open(package_json) as f:
+                contents = json.load(f)
+        except (IOError, ValueError) as ex:
+            # If we have an invalid or unreadable package.json file, there's
+            # something funny going on here so fail recognition.
+            # A package.json that exists is unusual enough that we want to warn
+            # regardless of whether the nodejs runtime was specified.
+            log_detect_error('node.js checker: error accessing package.json: '
+                             '%r' % ex)
+            return 1
+
+        # See if we've got a scripts.start field.
+        got_scripts_start = bool(contents.get('scripts', {}).get('start'))
+
+        # See if a version of node is specified.
+        try:
+            node_version = contents.get('engines', {}).get('node', None)
+            comm.info('node version is %s', node_version)
+        except AttributeError:
+            # Most likely "engines" wasn't a dictionary.
+            comm.warn('node.js checker: ignoring invalid "engines" field in '
+                      'package.json')
+            node_version = None
+
+        if node_version is None:
+            comm.warn('No node version specified.  Please add your node '
+                      'version, see '
+                      'https://docs.npmjs.com/files/package.json#engines')
+
+    if got_scripts_start or os.path.exists(os.path.join(path, 'server.js')):
+      runtime = 'custom' if config.params.custom else 'nodejs'
+      appinfo = {'runtime': runtime,
+                 'env': 'flex'}
+      comm.send_runtime_params({'got_package_json': got_package_json,
+                                'got_scripts_start': got_scripts_start,
+                                'node_version': node_version,
+                                'use_yarn': use_yarn},
+                                appinfo=appinfo)
+
+    else:
+        log_detect_error('node.js checker: Neither "start" in the "scripts" '
+                         'section of "package.json" nor the "server.js" file '
+                         'were found.')
+        return 1
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

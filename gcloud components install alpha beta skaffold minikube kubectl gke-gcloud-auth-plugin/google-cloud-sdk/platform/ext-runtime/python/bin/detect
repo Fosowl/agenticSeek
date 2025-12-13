@@ -1,0 +1,129 @@
+#!/usr/bin/python
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Language detection script.
+
+import json
+import os
+import sys
+
+# Augment the path with our library directory.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(ROOT_DIR, 'lib'))
+
+import comm
+import versions
+
+def PythonVersionFromRuntimeConfig(runtime_config):
+  """Validate the python_version section of runtime_config, if present.
+
+  Valid values are set in versions.PYTHON_INTERPRETER_VERSION_MAP. If
+  runtime_config is false-equivalent or if the python_version field is
+  absent, versions.DEFAULT_PYTHON_INTERPRETER_VERSION is used as the
+  default.
+
+  Args:
+    runtime_config: A valid runtime_config.
+
+  Returns:
+    One of the strings from versions.PYTHON_INTERPRETER_VERSION_MAP.keys().
+
+  Raises:
+    ValueError: If the contents of the python_version field are not valid.
+  """
+  if not runtime_config:
+    python_version = None
+  else:
+    python_version = runtime_config.python_version
+
+  if not python_version:
+    return versions.DEFAULT_PYTHON_INTERPRETER_VERSION
+  elif python_version in versions.PYTHON_INTERPRETER_VERSION_MAP:
+    return python_version
+  else:
+    raise ValueError('Unsupported or invalid python version specified.')
+
+def Main(args):
+  if len(args) != 2:
+    # If we're being called incorrectly, this probably isn't happening from a
+    # framework.
+    sys.stderr.write('Invalid Usage: %s <source-root-directory>' % sys.argv[0])
+    return 1
+
+  # Get the first argument, should be the source root directory.
+  path = args[1]
+
+  # See if we have a config file and if it contains an entrypoint.
+  config = comm.get_config()
+  appinfo = config.params.appinfo
+  entrypoint = None
+  if appinfo:
+    entrypoint = appinfo.entrypoint
+
+  comm.info('Checking for Python.')
+  got_shrinkwrap = False
+
+  requirements_txt = os.path.join(path, 'requirements.txt')
+
+  got_requirements_txt = os.path.isfile(requirements_txt)
+  got_py_files = False
+
+  # check for any python files.
+  for _, _, files in os.walk(path):
+    for filename in files:
+      if filename.endswith('.py'):
+        got_py_files = True
+
+  if not got_requirements_txt and not got_py_files:
+    return 1
+
+  # Query the user for the WSGI entrypoint:
+  if not entrypoint:
+    entrypoint = comm.query_user('This looks like a Python app.  If so, please '
+                                 'enter the command to run the app in '
+                                 "production (enter nothing if it's not a "
+                                 'python app): ')
+    if not entrypoint:
+      comm.info('No entrypoint specified.  Assuming this is not a python app.')
+      return 1
+    elif appinfo:
+      comm.print_status('To avoid being asked for an entrypoint in the '
+                        'future, please add the entrypoint to your app.yaml:\n'
+                        '  entrypoint: %s' % entrypoint)
+
+  try:
+    # Get the python interpreter version. Use the default if not specified.
+    python_version = PythonVersionFromRuntimeConfig(
+        appinfo.runtime_config if appinfo else None)
+  except ValueError:
+    # The python version was selected, but set to an invalid result.
+    valid_versions = str(sorted(versions.PYTHON_INTERPRETER_VERSION_MAP.keys()))
+    comm.error('The python_version selected in runtime_config is invalid or not '
+               'supported. Please select from the following options:\n'
+               '%s', valid_versions)
+    return 1
+
+  runtime = 'custom' if config.params.custom else 'python'
+
+  comm.send_runtime_params({'entrypoint': entrypoint,
+                            'got_requirements_txt': got_requirements_txt,
+                            'python_version': python_version},
+                           appinfo={'runtime': runtime,
+                                    'entrypoint': entrypoint,
+                                    'env': 'flex'})
+  return 0
+
+if __name__ == '__main__':
+  sys.exit(Main(sys.argv))
