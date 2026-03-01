@@ -1,109 +1,116 @@
 version: '3.8'
-
 services:
   redis:
     container_name: redis
-    profiles: ["core", "full"]
+    profiles:
+    - core
+    - full
     image: docker.io/valkey/valkey:8-alpine
     command: valkey-server --save 30 1 --loglevel warning
     restart: unless-stopped
     volumes:
-      - redis-data:/data
+    - redis-data:/data
     cap_drop:
-      - ALL
+    - ALL
     cap_add:
-      - SETGID
-      - SETUID
-      - DAC_OVERRIDE
+    - SETGID
+    - SETUID
+    - DAC_OVERRIDE
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: 1m
+        max-file: '1'
     networks:
-      - agentic-seek-net
-
+    - agentic-seek-net
+    read_only: true
+    tmpfs:
+    - /tmp
+    - /var/run
+    - /data
   searxng:
     container_name: searxng
-    profiles: ["core", "full"]
+    profiles:
+    - core
+    - full
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
     ports:
-      - "8080:8080"
+    - 8080:8080
     volumes:
-      - ./searxng:/etc/searxng:rw,z
+    - ./searxng:/etc/searxng:rw,z
     environment:
-      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8080/}
-      - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY}
-      - UWSGI_WORKERS=4
-      - UWSGI_THREADS=4
+    - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8080/}
+    - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY}
+    - UWSGI_WORKERS=4
+    - UWSGI_THREADS=4
     cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
+    - CHOWN
+    - SETGID
+    - SETUID
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: 1m
+        max-file: '1'
     depends_on:
-      - redis
+    - redis
     networks:
-      - agentic-seek-net
-
+    - agentic-seek-net
   frontend:
     container_name: frontend
-    profiles: ["core", "full"]
+    profiles:
+    - core
+    - full
     build:
       context: ./frontend
       dockerfile: Dockerfile.frontend
     ports:
-      - "3000:3000"
+    - 3000:3000
     volumes:
-      - ./frontend/agentic-seek-front/src:/app/src:rw,z
-      - ./screenshots:/app/screenshots
+    - ./frontend/agentic-seek-front/src:/app/src:rw,z
+    - ./screenshots:/app/screenshots
     environment:
-      - NODE_ENV=development
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_BACKEND_URL=http://localhost:7777
+    - NODE_ENV=development
+    - CHOKIDAR_USEPOLLING=true
+    - REACT_APP_BACKEND_URL=http://localhost:7777
     networks:
-      - agentic-seek-net
-
+    - agentic-seek-net
   backend:
     container_name: backend
-    profiles: ["backend", "full"]
+    profiles:
+    - backend
+    - full
     build:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - ${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
+    - ${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
     volumes:
-      - ./:/app
-      - ${WORK_DIR:-.}:/opt/workspace
+    - ./:/app
+    - ${WORK_DIR:-.}:/opt/workspace
     command: python3 api.py
     environment:
-      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
-      - REDIS_URL=${REDIS_BASE_URL:-redis://redis:6379/0}
-      - WORK_DIR=/opt/workspace
-      - BACKEND_PORT=${BACKEND_PORT}
-      - DOCKER_INTERNAL_URL=http://host.docker.internal
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-      - DSK_DEEPSEEK_API_KEY=${DSK_DEEPSEEK_API_KEY}
+    - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
+    - REDIS_URL=${REDIS_BASE_URL:-redis://redis:6379/0}
+    - WORK_DIR=/opt/workspace
+    - BACKEND_PORT=${BACKEND_PORT}
+    - DOCKER_INTERNAL_URL=http://host.docker.internal
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+    - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    - DSK_DEEPSEEK_API_KEY=${DSK_DEEPSEEK_API_KEY}
     networks:
-      - agentic-seek-net
+    - agentic-seek-net
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-  
+    - host.docker.internal:host-gateway
 volumes:
-  redis-data:
-  chrome_profiles:
-
+  redis-data: null
+  chrome_profiles: null
 networks:
   agentic-seek-net:
     driver: bridge
