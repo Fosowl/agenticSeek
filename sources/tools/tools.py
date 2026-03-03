@@ -1,4 +1,3 @@
-
 """
 define a generic tool class, any tool can be used by the agent.
 
@@ -31,7 +30,7 @@ class Tools():
     """
     Abstract class for all tools.
     """
-    def __init__(self):
+    def __init__(self, work_dir: str = None):
         self.tag = "undefined"
         self.name = "undefined"
         self.description = "undefined"
@@ -39,40 +38,37 @@ class Tools():
         self.messages = []
         self.logger = Logger("tools.log")
         self.config = configparser.ConfigParser()
-        self.work_dir = self.create_work_dir()
+        self.work_dir = self._initialize_work_dir(work_dir)
         self.excutable_blocks_found = False
         self.safe_mode = False
         self.allow_language_exec_bash = False
     
+    def _initialize_work_dir(self, work_dir: str = None) -> str:
+        """
+        Initialize the working directory for the tool.
+        """
+        if work_dir:
+            path = work_dir
+        else:
+            path = os.getenv('WORK_DIR')
+
+        if not path:
+            if os.path.exists('./config.ini'):
+                self.config.read('./config.ini')
+                path = self.config.get('MAIN', 'work_dir', fallback=None)
+
+        if not path:
+            self.logger.info("No work directory specified, using default.")
+            path = "workspace"
+
+        os.makedirs(path, exist_ok=True)
+        return path
+
     def get_work_dir(self):
         return self.work_dir
     
     def set_allow_language_exec_bash(self, value: bool) -> None:
         self.allow_language_exec_bash = value 
-
-    def safe_get_work_dir_path(self):
-        path = None
-        path = os.getenv('WORK_DIR', path)
-        if path is None or path == "":
-            path = self.config['MAIN']['work_dir'] if 'MAIN' in self.config and 'work_dir' in self.config['MAIN'] else None
-        if path is None or path == "":
-            print("No work directory specified, using default.")
-            path = self.create_work_dir()
-        return path
-    
-    def config_exists(self):
-        """Check if the config file exists."""
-        return os.path.exists('./config.ini')
-
-    def create_work_dir(self):
-        """Create the work directory if it does not exist."""
-        default_path = os.path.dirname(os.getcwd())
-        if self.config_exists():
-            self.config.read('./config.ini')
-            workdir_path = self.safe_get_work_dir_path()
-        else:
-            workdir_path = default_path
-        return workdir_path
 
     @abstractmethod
     def execute(self, blocks:[str], safety:bool) -> str:
