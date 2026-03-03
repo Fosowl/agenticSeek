@@ -1,0 +1,98 @@
+#!/usr/bin/python
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Java detection plugin."""
+
+import os
+import sys
+
+# Augment the path with our library directory.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(ROOT_DIR, 'lib'))
+
+import comm
+
+
+def main(args):
+    if len(args) != 2:
+        # If we're being called incorrectly, this probably isn't happening
+        # from a framework.
+        sys.stderr.write('Invalid Usage: %s <source-root-directory>' % sys.argv[0])
+        return 1
+
+    # Get the first argument, should be the source root directory.
+    path = args[1]
+
+    entrypoint = None
+    server = None
+    openjdk = None
+    config = comm.get_config()
+    appinfo = config.params.appinfo
+    if appinfo and appinfo.entrypoint:
+        entrypoint = appinfo.entrypoint
+
+    comm.info('Checking for Java.')
+    if appinfo:
+        runtime_config = appinfo.runtime_config
+        if runtime_config:
+            for key, value in runtime_config.to_dict().iteritems():
+                if key == 'server':
+                    if value != 'jetty9':
+                        comm.error('Unknown server : %s.' % value)
+                        return 1
+                    server = value
+                elif key == 'jdk':
+                    if value != 'openjdk8':
+                        comm.error('Unknown JDK : %s.' % value)
+                        return 1
+                    openjdk = value
+                else:
+                    comm.error('Unknown runtime_config entry : %s.' % key)
+                    return 1
+
+    artifact_to_deploy = '?'
+
+    # check for any Java known artifacts: a jar, a war, or an exploded Web App.
+    # TODO(ludo): expand to more complex configs with multiple Jars.
+    number_of_possible_artifacts = 0
+    for filename in os.listdir(path):
+        if filename.endswith('.war'):
+            artifact_to_deploy = filename
+            number_of_possible_artifacts += 1
+        if filename.endswith('.jar'):
+            artifact_to_deploy = filename
+            number_of_possible_artifacts += 1
+        if filename.endswith('WEB-INF'):
+            artifact_to_deploy = '.'
+            number_of_possible_artifacts += 1
+    if number_of_possible_artifacts == 0:
+        return 1
+    if number_of_possible_artifacts > 1:
+        comm.error('Too many java artifacts to deploy (.jar, .war, or Java '
+                   'Web App).')
+        return 1
+
+    if not appinfo:
+        appinfo = {'runtime': 'custom' if config.params.custom else 'java'}
+
+    comm.send_runtime_params({'entrypoint': entrypoint, 'server': server,
+                              'openjdk': openjdk,
+                              'artifact_to_deploy': artifact_to_deploy},
+                              appinfo)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
