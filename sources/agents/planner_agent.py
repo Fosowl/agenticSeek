@@ -76,7 +76,12 @@ class PlannerAgent(Agent):
         if blocks == None:
             return []
         for block in blocks:
-            line_json = json.loads(block)
+            try:
+                line_json = json.loads(block)
+            except json.JSONDecodeError as e:
+                self.logger.warning(f"Failed to parse JSON block: {e}")
+                pretty_print(f"JSON parsing error: {e}", color="warning")
+                return []
             if 'plan' in line_json:
                 for task in line_json['plan']:
                     if task['agent'].lower() not in [ag_name.lower() for ag_name in self.agents.keys()]:

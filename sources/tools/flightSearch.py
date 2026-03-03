@@ -12,61 +12,65 @@ from sources.tools.tools import Tools
 class FlightSearch(Tools):
     def __init__(self, api_key: str = None):
         """
-        A tool to search for flight information using a flight number via AviationStack API.
+        A tool to search for flight information using a flight number via SerpApi.
         """
         super().__init__()
         self.tag = "flight_search"
         self.name = "Flight Search"
-        self.description = "Search for flight information using a flight number via AviationStack API."
-        self.api_key = None
-        self.api_key = api_key or os.getenv("AVIATIONSTACK_API_KEY")
+        self.description = "Search for flight information using a flight number via SerpApi."
+        self.api_key = api_key or os.getenv("SERPAPI_API_KEY")
 
     def execute(self, blocks: str, safety: bool = True) -> str:
         if self.api_key is None:
-            return "Error: No AviationStack API key provided."
+            return "Error: No SerpApi key provided."
         
         for block in blocks:
-            flight_number = block.strip().lower().replace('\n', '')
+            flight_number = block.strip().upper().replace('\n', '')
             if not flight_number:
                 return "Error: No flight number provided."
 
             try:
-                url = "http://api.aviationstack.com/v1/flights"
+                url = "https://serpapi.com/search"
                 params = {
-                    "access_key": self.api_key,
-                    "flight_iata": flight_number,
-                    "limit": 1
+                    "engine": "google_flights",
+                    "api_key": self.api_key,
+                    "q": flight_number,
+                    "type": "2"  # Flight status search
                 }
+                
                 response = requests.get(url, params=params)
                 response.raise_for_status()
-
                 data = response.json()
-                if "data" in data and len(data["data"]) > 0:
-                    flight = data["data"][0]
-                    # Extract key flight information
-                    flight_status = flight.get("flight_status", "Unknown")
-                    departure = flight.get("departure", {})
-                    arrival = flight.get("arrival", {})
-                    airline = flight.get("airline", {}).get("name", "Unknown")
+                
+                if "flights" in data and len(data["flights"]) > 0:
+                    flight = data["flights"][0]
                     
-                    departure_airport = departure.get("airport", "Unknown")
-                    departure_time = departure.get("scheduled", "Unknown")
-                    arrival_airport = arrival.get("airport", "Unknown")
-                    arrival_time = arrival.get("scheduled", "Unknown")
+                    # Extract key information
+                    departure = flight.get("departure_airport", {})
+                    arrival = flight.get("arrival_airport", {})
+                    
+                    departure_code = departure.get("id", "Unknown")
+                    departure_time = flight.get("departure_time", "Unknown")
+                    arrival_code = arrival.get("id", "Unknown") 
+                    arrival_time = flight.get("arrival_time", "Unknown")
+                    airline = flight.get("airline", "Unknown")
+                    status = flight.get("flight_status", "Unknown")
 
                     return (
                         f"Flight: {flight_number}\n"
                         f"Airline: {airline}\n"
-                        f"Status: {flight_status}\n"
-                        f"Departure: {departure_airport} at {departure_time}\n"
-                        f"Arrival: {arrival_airport} at {arrival_time}"
+                        f"Status: {status}\n"
+                        f"Departure: {departure_code} at {departure_time}\n"
+                        f"Arrival: {arrival_code} at {arrival_time}"
                     )
                 else:
                     return f"No flight information found for {flight_number}"
+                    
             except requests.RequestException as e:
                 return f"Error during flight search: {str(e)}"
             except Exception as e:
                 return f"Unexpected error: {str(e)}"
+        
         return "No flight search performed"
 
     def execution_failure_check(self, output: str) -> bool:

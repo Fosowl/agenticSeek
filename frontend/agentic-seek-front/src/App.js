@@ -7,7 +7,7 @@ import { ResizableLayout } from "./components/ResizableLayout";
 import faviconPng from "./logo.png";
 import { useInterval } from "./hooks/useInterval";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:7777';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 console.log("Using backend URL:", BACKEND_URL);
 
 function App() {

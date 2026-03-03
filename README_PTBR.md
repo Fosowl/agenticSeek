@@ -1,48 +1,52 @@
-# AgenticSeek: Alternativa Privada e Local ao Manus.
+# AgenticSeek: Uma Alternativa Privada e Local ao Manus
 
 <p align="center">
 <img align="center" src="./media/agentic_seek_logo.png" width="300" height="300" alt="Agentic Seek Logo">
 <p>
 
-    English | [中文](./README_CHS.md) | [繁體中文](./README_CHT.md) | [Français](./README_FR.md) | [日本語](./README_JP.md) | [Português (Brasil)](./README_PTBR.md)
+  English | [中文](./README_CHS.md) | [繁體中文](./README_CHT.md) | [Français](./README_FR.md) | [日本語](./README_JP.md) | [Português (Brasil)](./README_PTBR.md) | [Español](./README_ES.md) | [Türkçe](./README_TR.md)
 
-*Uma **alternativa 100% local ao Manus AI**, este assistente de voz com IA navega autonomamente na web, escreve código e planeja tarefas mantendo todos os dados no seu dispositivo. Feito para modelos de raciocínio locais, roda inteiramente no seu hardware, garantindo total privacidade e zero dependência da nuvem.*
+*Um assistente de IA com reconhecimento de voz que é uma **alternativa 100% local ao Manus AI**, navega autonomamente na web, escreve código e planeja tarefas enquanto mantém todos os dados no seu dispositivo. Projetado para modelos de raciocínio local, funciona inteiramente no seu hardware, garantindo total privacidade e zero dependência de nuvem.*
 
-[![Visite AgenticSeek](https://img.shields.io/static/v1?label=Website&message=AgenticSeek&color=blue&style=flat-square)](https://fosowl.github.io/agenticSeek.html) ![Licença](https://img.shields.io/badge/license-GPL--3.0-green) [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.gg/8hGDaME3TC) [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/fosowl.svg?style=social&label=Update%20%40Fosowl)](https://x.com/Martin993886460) [![GitHub stars](https://img.shields.io/github/stars/Fosowl/agenticSeek?style=social)](https://github.com/Fosowl/agenticSeek/stargazers)
+[![Visitar AgenticSeek](https://img.shields.io/static/v1?label=Website&message=AgenticSeek&color=blue&style=flat-square)](https://fosowl.github.io/agenticSeek.html) ![License](https://img.shields.io/badge/license-GPL--3.0-green) [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&logoColor=white)](https://discord.gg/8hGDaME3TC) [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/fosowl.svg?style=social&label=Update%20%40Fosowl)](https://x.com/Martin993886460) [![GitHub stars](https://img.shields.io/github/stars/Fosowl/agenticSeek?style=social)](https://github.com/Fosowl/agenticSeek/stargazers)
 
-### Por que AgenticSeek?
+### Por que escolher o AgenticSeek?
 
-* 🔒 Totalmente Local & Privado - Tudo roda na sua máquina — sem nuvem, sem compartilhamento de dados. Seus arquivos, conversas e buscas permanecem privados.
+* 🔒 Totalmente Local & Privado - Tudo funciona na sua máquina, sem nuvem, sem compartilhamento de dados. Seus arquivos, conversas e pesquisas permanecem privados.
 
-* 🌐 Navegação Inteligente na Web - O AgenticSeek pode navegar na internet sozinho — pesquisar, ler, extrair informações, preencher formulários — tudo sem as mãos.
+* 🌐 Navegação Web Inteligente - O AgenticSeek pode navegar na Internet autonomamente: pesquisar, ler, extrair informações, preencher formulários web, tudo sem intervenção manual.
 
-* 💻 Assistente Autônomo de Programação - Precisa de código? Ele pode escrever, depurar e executar programas em Python, C, Go, Java e mais — tudo sem supervisão.
+* 💻 Assistente de Programação Autônomo - Precisa de código? Ele pode escrever, depurar e executar programas em Python, C, Go, Java e muito mais, sem supervisão.
 
-* 🧠 Seleção Inteligente de Agentes - Você pede, ele escolhe automaticamente o melhor agente para a tarefa. Como ter uma equipe de especialistas pronta para ajudar.
+* 🧠 Seleção Inteligente de Agentes - Você pergunta, ele escolhe automaticamente o melhor agente para a tarefa. Como ter uma equipe de especialistas sempre disponível.
 
-* 📋 Planeja & Executa Tarefas Complexas - De planejamento de viagens a projetos complexos — pode dividir grandes tarefas em etapas e concluí-las usando múltiplos agentes de IA.
+* 📋 Planeja e Executa Tarefas Complexas - Desde o planejamento de viagens até projetos complexos, ele pode decompor grandes tarefas em etapas e completá-las usando múltiplos agentes de IA.
 
-* 🎙️ Ativado por Voz - Voz limpa, rápida e futurista, além de reconhecimento de fala, permitindo que você converse como se fosse sua IA pessoal de um filme de ficção científica. (Em desenvolvimento)
+* 🎙️ Suporte de Voz - Voz clara, rápida e futurista com reconhecimento de voz, permitindo que você converse como com sua IA pessoal de filme de ficção científica. (Em desenvolvimento)
 
 ### **Demo**
 
-> *Você pode pesquisar sobre o projeto agenticSeek, aprender quais habilidades são necessárias, depois abrir o CV_candidates.zip e então me dizer quais combinam melhor com o projeto?*
+> *Você pode pesquisar o projeto agenticSeek, aprender quais habilidades são necessárias e, em seguida, abrir CV_candidates.zip e me dizer quais correspondem melhor ao projeto?*
 
 https://github.com/user-attachments/assets/b8ca60e9-7b3b-4533-840e-08f9ac426316
 
-Aviso: Esta demonstração, incluindo todos os arquivos que aparecem (ex: CV_candidates.zip), são totalmente fictícios. Não somos uma corporação, buscamos colaboradores open-source, não candidatos.
+Aviso: Esta demonstração e todos os arquivos que aparecem (ex: CV_candidates.zip) são totalmente fictícios. Não somos uma empresa, estamos procurando contribuidores de código aberto, não candidatos.
 
-> 🛠⚠️️ **Trabalho Ativo em Progresso**
+> 🛠⚠️️ **Trabalho Ativo em Andamento**
 
-> 🙏 Este projeto começou como um projeto paralelo e não tem roteiro nem financiamento. Cresceu muito além do esperado ao aparecer no GitHub Trending. Contribuições, feedback e paciência são profundamente apreciados.
+> 🙏 Este projeto começou como um projeto paralelo e não tem roadmap nem financiamento. Cresceu muito além das expectativas ao aparecer no GitHub Trending. Contribuições, comentários e paciência são profundamente apreciados.
 
 ## Pré-requisitos
 
-Certifique-se de ter chrome driver, docker e python3.10 instalados.
+Antes de começar, certifique-se de ter instalado:
 
-Para problemas relacionados ao chrome driver, veja a seção **Chromedriver**.
+*   **Git:** Para clonar o repositório. [Baixar Git](https://git-scm.com/downloads)
+*   **Python 3.10.x:** Python 3.10.x é altamente recomendado. Outras versões podem causar erros de dependência. [Baixar Python 3.10](https://www.python.org/downloads/release/python-3100/) (selecione a versão 3.10.x).
+*   **Docker Engine & Docker Compose:** Para executar serviços empacotados como SearxNG.
+    *   Instalar Docker Desktop (inclui Docker Compose V2): [Windows](https://docs.docker.com/desktop/install/windows-install/) | [Mac](https://docs.docker.com/desktop/install/mac-install/) | [Linux](https://docs.docker.com/desktop/install/linux-install/)
+    *   Ou instalar Docker Engine e Docker Compose separadamente no Linux: [Docker Engine](https://docs.docker.com/engine/install/) | [Docker Compose](https://docs.docker.com/compose/install/) (certifique-se de instalar Compose V2, por exemplo `sudo apt-get install docker-compose-plugin`).
 
-### 1. **Clone o repositório e configure**
+### 1. **Clonar o repositório e configurar**
 
 ```sh
 git clone https://github.com/Fosowl/agenticSeek.git
@@ -50,67 +54,71 @@ cd agenticSeek
 mv .env.example .env
 ```
 
-### 2. Altere o conteúdo do arquivo .env
+### 2. Modificar o conteúdo do arquivo .env
 
 ```sh
-SEARXNG_BASE_URL="http://127.0.0.1:8080"
+SEARXNG_BASE_URL="http://searxng:8080" # Se você executar no modo CLI no host, use http://127.0.0.1:8080
 REDIS_BASE_URL="redis://redis:6379/0"
 WORK_DIR="/Users/mlg/Documents/workspace_for_ai"
 OLLAMA_PORT="11434"
 LM_STUDIO_PORT="1234"
 CUSTOM_ADDITIONAL_LLM_PORT="11435"
-OPENAI_API_KEY='opcional'
-DEEPSEEK_API_KEY='opcional'
-OPENROUTER_API_KEY='opcional'
-TOGETHER_API_KEY='opcional'
-GOOGLE_API_KEY='opcional'
-ANTHROPIC_API_KEY='opcional'
+OPENAI_API_KEY='optional'
+DEEPSEEK_API_KEY='optional'
+OPENROUTER_API_KEY='optional'
+TOGETHER_API_KEY='optional'
+GOOGLE_API_KEY='optional'
+ANTHROPIC_API_KEY='optional'
 ```
 
-**As chaves de API são totalmente opcionais para quem optar por rodar LLM localmente. Que é o objetivo principal deste projeto. Deixe em branco se você tiver hardware suficiente**
+Atualize o arquivo `.env` conforme necessário:
 
-As seguintes variáveis de ambiente configuram as conexões e chaves de API do seu aplicativo.
+- **SEARXNG_BASE_URL**: Mantenha inalterado, a menos que você execute no modo CLI no host.
+- **REDIS_BASE_URL**: Mantenha inalterado 
+- **WORK_DIR**: Caminho para o diretório de trabalho local. O AgenticSeek poderá ler e interagir com esses arquivos.
+- **OLLAMA_PORT**: Número da porta para o serviço Ollama.
+- **LM_STUDIO_PORT**: Número da porta para o serviço LM Studio.
+- **CUSTOM_ADDITIONAL_LLM_PORT**: Porta para qualquer serviço LLM personalizado adicional.
 
-Atualize o arquivo `.env` com seus próprios valores conforme necessário:
+**As chaves de API são completamente opcionais para aqueles que optam por executar LLM localmente, que é o objetivo principal deste projeto. Deixe-as vazias se você tiver hardware suficiente.**
 
-- **SEARXNG_BASE_URL**: Deixe inalterado
-- **REDIS_BASE_URL**: Deixe inalterado
-- **WORK_DIR**: Caminho para seu diretório de trabalho local. O AgenticSeek poderá ler e interagir com esses arquivos.
-- **OLLAMA_PORT**: Porta para o serviço Ollama.
-- **LM_STUDIO_PORT**: Porta para o serviço LM Studio.
-- **CUSTOM_ADDITIONAL_LLM_PORT**: Porta para qualquer serviço LLM adicional.
+### 3. **Iniciar o Docker**
 
-Todas as variáveis de ambiente de chave de API abaixo são **opcionais**. Só forneça se for usar APIs externas em vez de rodar LLMs localmente.
+Certifique-se de que o Docker está instalado e funcionando no seu sistema. Você pode iniciar o Docker com os seguintes comandos:
 
-### 3. **Inicie o Docker**
+- **Linux/macOS:**  
+    Abra um terminal e execute:
+    ```sh
+    sudo systemctl start docker
+    ```
+    Ou inicie o Docker Desktop a partir do menu de aplicativos, se instalado.
 
-Certifique-se de que o Docker está instalado e rodando no seu sistema. Você pode iniciar o Docker com os seguintes comandos:
+- **Windows:**  
+    Inicie o Docker Desktop a partir do menu Iniciar.
 
-- **No Linux/macOS:**  
-        Abra um terminal e execute:
-        ```sh
-        sudo systemctl start docker
-        ```
-        Ou inicie o Docker Desktop pelo menu de aplicativos, se instalado.
-
-- **No Windows:**  
-        Inicie o Docker Desktop pelo menu Iniciar.
-
-Você pode verificar se o Docker está rodando executando:
+Você pode verificar se o Docker está funcionando executando:
 ```sh
 docker info
 ```
-Se aparecerem informações sobre sua instalação do Docker, está funcionando corretamente.
+Se você vir informações sobre sua instalação do Docker, ele está funcionando corretamente.
+
+Consulte a [Lista de provedores locais](#lista-de-provedores-locais) abaixo para um resumo.
+
+Próxima etapa: [Executar o AgenticSeek localmente](#iniciar-os-serviços-e-executar)
+
+*Se você encontrar problemas, consulte a seção [Solução de problemas](#solução-de-problemas).*
+*Se seu hardware não puder executar LLM localmente, consulte [Configuração para executar com uma API](#configuração-para-executar-com-uma-api).*
+*Para explicações detalhadas do `config.ini`, consulte a [seção Configuração](#configuração).*
 
 ---
 
-## Configuração para rodar LLM localmente na sua máquina
+## Configuração para executar LLM localmente na sua máquina
 
-**Requisitos de Hardware:**
+**Requisitos de hardware:**
 
-Para rodar LLMs localmente, você precisará de hardware suficiente. No mínimo, uma GPU capaz de rodar Qwen/Deepseek 14B é necessária. Veja o FAQ para recomendações detalhadas de modelo/desempenho.
+Para executar LLM localmente, você precisará de hardware suficiente. No mínimo, uma GPU capaz de executar Magistral, Qwen ou Deepseek 14B é necessária. Consulte o FAQ para recomendações detalhadas de modelo/desempenho.
 
-**Configure seu provedor local**
+**Configure seu provedor local**  
 
 Inicie seu provedor local, por exemplo com ollama:
 
@@ -118,187 +126,229 @@ Inicie seu provedor local, por exemplo com ollama:
 ollama serve
 ```
 
-Veja abaixo a lista de provedores locais suportados.
+Consulte a lista de provedores locais suportados abaixo.
 
-**Atualize o config.ini**
+**Atualizar config.ini**
 
-Altere o arquivo config.ini para definir o provider_name para um provedor suportado e provider_model para um LLM suportado pelo seu provedor. Recomendamos modelos de raciocínio como *Qwen* ou *Deepseek*.
+Altere o arquivo config.ini para definir provider_name como um provedor suportado e provider_model como um LLM suportado pelo seu provedor. Recomendamos modelos de raciocínio como *Magistral* ou *Deepseek*.
 
-Veja o **FAQ** no final do README para hardware necessário.
+Consulte o **FAQ** no final do README para o hardware necessário.
 
 ```sh
 [MAIN]
-is_local = True # Se está rodando localmente ou com provedor remoto.
+is_local = True # Se você está executando localmente ou com um provedor remoto.
 provider_name = ollama # ou lm-studio, openai, etc.
 provider_model = deepseek-r1:14b # escolha um modelo compatível com seu hardware
 provider_server_address = 127.0.0.1:11434
-agent_name = Jarvis # nome da sua IA
-recover_last_session = True # recuperar sessão anterior
-save_session = True # lembrar sessão atual
+agent_name = Jarvis # o nome da sua IA
+recover_last_session = True # recuperar a sessão anterior
+save_session = True # memorizar a sessão atual
 speak = False # texto para fala
 listen = False # fala para texto, apenas para CLI, experimental
-jarvis_personality = False # usar personalidade "Jarvis" (experimental)
-languages = en zh # Lista de idiomas, TTS usará o primeiro da lista
+jarvis_personality = False # usar uma personalidade mais "Jarvis" (experimental)
+languages = en zh # Lista de idiomas, TTS usará o primeiro da lista por padrão
 [BROWSER]
-headless_browser = True # deixe inalterado a menos que use CLI no host.
-stealth_mode = True # Usa selenium indetectável para reduzir detecção do navegador
+headless_browser = True # mantenha inalterado, a menos que use CLI no host.
+stealth_mode = True # Use selenium indetectável para reduzir a detecção do navegador
 ```
 
 **Aviso**:
 
 - O formato do arquivo `config.ini` não suporta comentários.
-Não copie e cole a configuração de exemplo diretamente, pois comentários causarão erros. Em vez disso, modifique manualmente o arquivo `config.ini` com suas configurações desejadas, sem comentários.
+Não copie e cole diretamente a configuração de exemplo, pois os comentários causarão erros. Em vez disso, modifique manualmente o arquivo `config.ini` com sua configuração desejada, sem comentários.
 
-- *NÃO* defina provider_name como `openai` se estiver usando LM-studio para rodar LLMs. Use `lm-studio`.
+- *NÃO* defina provider_name como `openai` se você estiver usando LM-studio para executar LLM. Use-o como `lm-studio`.
 
 - Alguns provedores (ex: lm-studio) exigem `http://` antes do IP. Exemplo: `http://127.0.0.1:1234`
 
 **Lista de provedores locais**
 
-| Provedor   | Local? | Descrição                                               |
-|------------|--------|---------------------------------------------------------|
-| ollama     | Sim    | Rode LLMs localmente facilmente usando ollama           |
-| lm-studio  | Sim    | Rode LLM localmente com LM studio (`provider_name` = `lm-studio`)|
-| openai     | Sim    | Use API compatível com openai (ex: servidor llama.cpp)  |
+| Provedor  | Local ? | Descrição                                               |
+|-----------|--------|-----------------------------------------------------------|
+| ollama    | Sim    | Executa LLM localmente facilmente usando ollama |
+| lm-studio  | Sim    | Executa LLM localmente com LM studio (defina `provider_name` = `lm-studio`)|
+| openai    | Sim     |  Use uma API compatível com openai (ex: servidor llama.cpp)  |
 
-Próximo passo: [Inicie os serviços e rode o AgenticSeek](#Start-services-and-Run)
+Próxima etapa: [Iniciar os serviços e executar o AgenticSeek](#iniciar-os-serviços-e-executar)  
 
-*Veja a seção **Problemas conhecidos** se tiver problemas*
+*Se você encontrar problemas, consulte a seção [Solução de problemas](#solução-de-problemas).*
+*Se seu hardware não puder executar LLM localmente, consulte [Configuração para executar com uma API](#configuração-para-executar-com-uma-api).*
+*Para explicações detalhadas do `config.ini`, consulte a [seção Configuração](#configuração).*
 
-*Veja a seção **Rodar com uma API** se seu hardware não rodar deepseek localmente*
+## Configuração para executar com uma API
 
-*Veja a seção **Config** para explicação detalhada do arquivo de configuração.*
+Esta configuração usa provedores de LLM externos baseados em nuvem. Você precisará obter chaves de API do serviço escolhido.
 
----
+**1. Escolha um provedor de API e obtenha uma chave de API:**
 
-## Configuração para rodar com uma API
+Consulte a [Lista de provedores de API](#lista-de-provedores-de-api) abaixo. Visite seus sites para se inscrever e obter chaves de API.
 
-**Rodar com uma API é opcional, veja acima para rodar localmente.**
+**2. Defina sua chave de API como variável de ambiente:**
 
-Defina o provedor desejado no `config.ini`. Veja abaixo a lista de provedores de API.
+*   **Linux/macOS:**
+    Abra um terminal e use o comando `export`. É melhor adicioná-lo ao arquivo de configuração do seu shell (ex: `~/.bashrc`, `~/.zshrc`) para que seja persistente.
+    ```sh
+    export PROVIDER_API_KEY="your_api_key_here" 
+    # Substitua PROVIDER_API_KEY pelo nome de variável específico, ex: OPENAI_API_KEY, GOOGLE_API_KEY
+    ```
+    Exemplo TogetherAI:
+    ```sh
+    export TOGETHER_API_KEY="xxxxxxxxxxxxxxxxxxxxxx"
+    ```
+*   **Windows:**
+    *   **Prompt de comando (temporário para a sessão atual):**
+        ```cmd
+        set PROVIDER_API_KEY=your_api_key_here
+        ```
+    *   **PowerShell (temporário para a sessão atual):**
+        ```powershell
+        $env:PROVIDER_API_KEY="your_api_key_here"
+        ```
+    *   **Permanente:** Pesquise "variáveis de ambiente" na barra de pesquisa do Windows, clique em "Editar variáveis de ambiente do sistema" e depois no botão "Variáveis de ambiente...". Adicione uma nova variável de usuário com o nome apropriado (ex: `OPENAI_API_KEY`) e sua chave como valor.
 
-```sh
+    *(Para mais detalhes, consulte o FAQ: [Como configurar uma chave de API?](#como-configurar-uma-chave-de-api)).*
+
+
+**3. Atualize `config.ini`:**
+```ini
 [MAIN]
 is_local = False
-provider_name = google
-provider_model = gemini-2.0-flash
-provider_server_address = 127.0.0.1:5000 # não importa
+provider_name = openai # ou google, deepseek, togetherAI, huggingface
+provider_model = gpt-3.5-turbo # ou gemini-1.5-flash, deepseek-chat, mistralai/Mixtral-8x7B-Instruct-v0.1, etc.
+provider_server_address = # Quando is_local = False, geralmente ignorado ou pode ser deixado vazio para a maioria das APIs
+# ... outras configurações ...
 ```
-Aviso: Certifique-se de não haver espaço no final da linha no config.
-
-Exporte sua chave de API: `export <<PROVIDER>>_API_KEY="xxx"`
-
-Exemplo: exportar `TOGETHER_API_KEY="xxxxx"`
+*Aviso:* Certifique-se de que não há espaços no final dos valores no config.
 
 **Lista de provedores de API**
-    
-| Provedor   | Local? | Descrição                                               |
-|------------|--------|---------------------------------------------------------|
-| openai     | Depende| Use API do ChatGPT  |
-| deepseek   | Não    | API Deepseek (não privado)                              |
-| huggingface| Não    | API Hugging-Face (não privado)                          |
-| togetherAI | Não    | Use API together AI (não privado)                       |
-| google     | Não    | Use API google gemini (não privado)                     |
 
-Observe que código/bash pode falhar com gemini, pois ignora nosso prompt de formatação, que é otimizado para deepseek r1. Modelos como gpt-4o também apresentam desempenho ruim com nosso prompt.
+| Provedor     | `provider_name` | Local ? | Descrição                                       | Link da chave de API (exemplo)                     |
+|--------------|-----------------|--------|---------------------------------------------------|---------------------------------------------|
+| OpenAI       | `openai`        | Não     | Use os modelos ChatGPT via API OpenAI.              | [platform.openai.com/signup](https://platform.openai.com/signup) |
+| Google Gemini| `google`        | Não     | Use os modelos Google Gemini via Google AI Studio.    | [aistudio.google.com/keys](https://aistudio.google.com/keys) |
+| Deepseek     | `deepseek`      | Não     | Use os modelos Deepseek via sua API.                | [platform.deepseek.com](https://platform.deepseek.com) |
+| Hugging Face | `huggingface`   | Não     | Use modelos do Hugging Face Inference API.       | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| TogetherAI   | `togetherAI`    | Não     | Use vários modelos open source via API TogetherAI.| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
 
-Próximo passo: [Inicie os serviços e rode o AgenticSeek](#Start-services-and-Run)
+*Nota:*
+*   Não recomendamos usar `gpt-4o` ou outros modelos OpenAI para navegação web complexa e planejamento de tarefas, pois a otimização atual de prompts visa modelos como Deepseek.
+*   Tarefas de codificação/bash podem falhar com Gemini, pois tende a ignorar nosso formato de prompt otimizado para Deepseek r1.
+*   Quando `is_local = False`, `provider_server_address` no `config.ini` geralmente não é usado, pois os endpoints de API são geralmente gerenciados pelas bibliotecas do provedor correspondente.
 
-*Veja a seção **Problemas conhecidos** se tiver problemas*
+Próxima etapa: [Iniciar os serviços e executar o AgenticSeek](#iniciar-os-serviços-e-executar)
 
-*Veja a seção **Config** para explicação detalhada do arquivo de configuração.*
+*Se você encontrar problemas, consulte a seção **Problemas conhecidos***
+
+*Para explicações detalhadas do arquivo de configuração, consulte a **seção Configuração**.*
 
 ---
 
-## Inicie os serviços e rode
+## Iniciar os serviços e executar
+
+Por padrão, o AgenticSeek é executado inteiramente no Docker.
+
+**Opção 1:** Executar no Docker com interface web:
 
 Inicie os serviços necessários. Isso iniciará todos os serviços do docker-compose.yml, incluindo:
-        - searxng
-        - redis (necessário para searxng)
-        - frontend
-        - backend (se usar `full`)
+    - searxng
+    - redis (necessário para searxng)
+    - frontend
+    - backend (se você usar `full` para a interface web)
 
 ```sh
 ./start_services.sh full # MacOS
-start ./start_services.cmd full # Windows
+start start_services.cmd full # Windows
 ```
 
-**Aviso:** Este passo fará download e carregará todas as imagens Docker, o que pode levar até 30 minutos. Após iniciar os serviços, aguarde até que o serviço backend esteja totalmente rodando (você verá backend: <info> no log) antes de enviar mensagens. O backend pode demorar mais para iniciar.
+**Aviso:** Esta etapa baixará e carregará todas as imagens do Docker, o que pode levar até 30 minutos. Depois de iniciar os serviços, aguarde até que o serviço backend esteja totalmente operacional (você deve ver **backend: "GET /health HTTP/1.1" 200 OK** nos logs) antes de enviar mensagens. Na primeira inicialização, o serviço backend pode levar 5 minutos para iniciar.
 
-Acesse `http://localhost:3000/` e você verá a interface web.
+Vá para `http://localhost:3000/` e você deve ver a interface web.
 
-**Opcional:** Rode com a interface CLI:
+*Solução de problemas de inicialização de serviços:* Se esses scripts falharem, certifique-se de que o Docker Engine está funcionando e que o Docker Compose (V2, `docker compose`) está instalado corretamente. Verifique as mensagens de erro na saída do terminal. Consulte [FAQ: Ajuda! Estou recebendo erros ao executar o AgenticSeek ou seus scripts.](#faq-solução-de-problemas)
 
-Para rodar com CLI, instale os pacotes no host:
+**Opção 2:** Modo CLI:
+
+Para executar com a interface CLI, você precisa instalar os pacotes no host:
 
 ```sh
 ./install.sh
 ./install.bat # windows
 ```
 
-Inicie os serviços:
+Em seguida, você precisa alterar SEARXNG_BASE_URL no `config.ini` para:
+
+```sh
+SEARXNG_BASE_URL="http://localhost:8080"
+```
+
+Inicie os serviços necessários. Isso iniciará alguns serviços do docker-compose.yml, incluindo:
+    - searxng
+    - redis (necessário para searxng)
+    - frontend
 
 ```sh
 ./start_services.sh # MacOS
-start ./start_services.cmd # Windows
+start start_services.cmd # Windows
 ```
 
-Depois execute: `uv run cli.py`
+Execute: uv run: `uv run python -m ensurepip` para garantir que o uv tenha o pip ativado.
+
+Use CLI: `uv run cli.py`
 
 ---
 
 ## Uso
 
-Certifique-se de que os serviços estão rodando com `./start_services.sh full` e acesse `localhost:3000` para a interface web.
+Certifique-se de que os serviços estão funcionando com `./start_services.sh full` e vá para `localhost:3000` para a interface web.
 
-Você também pode usar fala para texto definindo `listen = True` no config. Apenas para modo CLI.
+Você também pode usar fala para texto definindo `listen = True`. Apenas para o modo CLI.
 
 Para sair, basta dizer/digitar `goodbye`.
 
-Exemplos de uso:
+Alguns exemplos de uso:
 
-> *Faça um jogo da cobrinha em python!*
+> *Faça um jogo da cobra em python!*
 
-> *Pesquise na web pelos melhores cafés em Rennes, França, e salve uma lista de três com seus endereços em rennes_cafes.txt.*
+> *Pesquise na web os melhores cafés em Rennes, França, e salve uma lista de três com seus endereços em rennes_cafes.txt.*
 
-> *Escreva um programa Go para calcular o fatorial de um número, salve como factorial.go no seu workspace*
+> *Escreva um programa Go para calcular o fatorial de um número, salve-o como factorial.go em seu workspace*
 
-> *Procure na pasta summer_pictures por todos os arquivos JPG, renomeie com a data de hoje e salve a lista dos arquivos renomeados em photos_list.txt*
+> *Pesquise na pasta summer_pictures todos os arquivos JPG, renomeie-os com a data de hoje e salve a lista de arquivos renomeados em photos_list.txt*
 
-> *Pesquise online por filmes de ficção científica populares de 2024 e escolha três para assistir hoje à noite. Salve a lista em movie_night.txt.*
+> *Pesquise online os filmes de ficção científica populares de 2024 e escolha três para assistir esta noite. Salve a lista em movie_night.txt.*
 
-> *Pesquise na web pelos últimos artigos de notícias de IA de 2025, selecione três e escreva um script Python para extrair títulos e resumos. Salve o script como news_scraper.py e os resumos em ai_news.txt em /home/projects*
+> *Pesquise na web os últimos artigos de notícias sobre IA de 2025, selecione três e escreva um script Python para extrair os títulos e resumos. Salve o script como news_scraper.py e os resumos em ai_news.txt em /home/projects*
 
-> *Sexta-feira, pesquise na web por uma API gratuita de preços de ações, registre-se com supersuper7434567@gmail.com e escreva um script Python para buscar os preços diários da Tesla usando a API, salvando os resultados em stock_prices.csv*
+> *Sexta-feira, pesquise na web uma API gratuita de preços de ações, inscreva-se com supersuper7434567@gmail.com e escreva um script Python para obter os preços diários da Tesla usando a API, salvando os resultados em stock_prices.csv*
 
 *Observe que o preenchimento de formulários ainda é experimental e pode falhar.*
 
-Após digitar sua consulta, o AgenticSeek alocará o melhor agente para a tarefa.
+Depois de inserir sua consulta, o AgenticSeek atribuirá o melhor agente para a tarefa.
 
-Como este é um protótipo inicial, o sistema de roteamento de agentes pode não alocar sempre o agente certo para sua consulta.
+Como este é um protótipo inicial, o sistema de roteamento de agentes pode nem sempre atribuir o agente correto à sua consulta.
 
-Portanto, seja explícito no que deseja e como a IA deve proceder. Por exemplo, se quiser que faça uma busca na web, não diga:
+Portanto, seja muito explícito sobre o que você quer e como a IA pode proceder, por exemplo, se você quiser que ela faça uma pesquisa na web, não diga:
 
-`Você conhece alguns bons países para viajar sozinho?`
+`Você conhece bons países para viajar sozinho?`
 
-Em vez disso, peça:
+Em vez disso, diga:
 
-`Faça uma busca na web e descubra quais são os melhores países para viajar sozinho`
+`Execute uma pesquisa na web e descubra quais são os melhores países para viajar sozinho`
 
 ---
 
-## **Configuração para rodar o LLM em seu próprio servidor**
+## **Configuração para executar LLM em seu próprio servidor**
 
-Se você tem um computador potente ou servidor, mas quer usar a partir do seu laptop, pode rodar o LLM em um servidor remoto usando nosso servidor LLM customizado.
+Se você tem um computador poderoso ou um servidor que pode acessar, mas quer usá-lo do seu laptop, você pode optar por executar o LLM em um servidor remoto usando nosso servidor llm personalizado.
 
-No seu "servidor" que rodará o modelo de IA, obtenha o endereço IP
+No seu "servidor" que executará o modelo de IA, obtenha o endereço IP
 
 ```sh
-ip a | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1 # ip local
-curl https://ipinfo.io/ip # ip público
+ip a | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1 # IP local
+curl https://ipinfo.io/ip # IP público
 ```
 
-Nota: Para Windows ou macOS, use ipconfig ou ifconfig para encontrar o IP.
+Nota: Para Windows ou macOS, use ipconfig ou ifconfig para encontrar o endereço IP.
 
 Clone o repositório e entre na pasta `server/`.
 
@@ -313,44 +363,44 @@ Instale os requisitos específicos do servidor:
 pip3 install -r requirements.txt
 ```
 
-Rode o script do servidor.
+Execute o script do servidor.
 
 ```sh
 python3 app.py --provider ollama --port 3333
 ```
 
-Você pode escolher entre usar `ollama` e `llamacpp` como serviço LLM.
+Você pode escolher usar `ollama` e `llamacpp` como serviço LLM.
 
-Agora, no seu computador pessoal:
+Agora no seu computador pessoal:
 
 Altere o arquivo `config.ini` para definir `provider_name` como `server` e `provider_model` como `deepseek-r1:xxb`.
-Defina `provider_server_address` para o IP da máquina que rodará o modelo.
+Defina `provider_server_address` como o endereço IP da máquina que executará o modelo.
 
 ```sh
 [MAIN]
 is_local = False
 provider_name = server
 provider_model = deepseek-r1:70b
-provider_server_address = x.x.x.x:3333
+provider_server_address = http://x.x.x.x:3333
 ```
 
-Próximo passo: [Inicie os serviços e rode o AgenticSeek](#Start-services-and-Run)
+Próxima etapa: [Iniciar os serviços e executar o AgenticSeek](#iniciar-os-serviços-e-executar)  
 
 ---
 
 ## Fala para Texto
 
-Aviso: fala para texto só funciona no modo CLI no momento.
+Aviso: Fala para texto funciona apenas no modo CLI no momento.
 
-Atualmente, fala para texto só funciona em inglês.
+Observe que a fala para texto funciona apenas em inglês no momento.
 
-A funcionalidade de fala para texto está desativada por padrão. Para ativar, defina listen como True no arquivo config.ini:
+A funcionalidade de fala para texto está desativada por padrão. Para ativá-la, defina listen como True no arquivo config.ini:
 
 ```
 listen = True
 ```
 
-Quando ativado, o recurso escuta por uma palavra-chave de ativação, que é o nome do agente, antes de processar sua entrada. Você pode personalizar o nome do agente atualizando o valor `agent_name` no *config.ini*:
+Quando ativada, a funcionalidade de fala para texto ouve uma palavra-chave de gatilho, que é o nome do agente, antes de processar sua entrada. Você pode personalizar o nome do agente atualizando o valor `agent_name` em *config.ini*:
 
 ```
 agent_name = Friday
@@ -358,179 +408,266 @@ agent_name = Friday
 
 Para melhor reconhecimento, recomendamos usar um nome comum em inglês como "John" ou "Emma" como nome do agente.
 
-Quando o transcript começar a aparecer, diga o nome do agente em voz alta para ativá-lo (ex: "Friday").
+Assim que você vir a transcrição começar a aparecer, diga o nome do agente em voz alta para acordá-lo (ex: "Friday").
 
-Fale sua consulta claramente.
+Diga sua consulta claramente.
 
-Finalize seu pedido com uma frase de confirmação para o sistema prosseguir. Exemplos de frases de confirmação incluem:
+Termine sua solicitação com uma frase de confirmação para indicar ao sistema para continuar. Exemplos de frases de confirmação incluem:
 ```
 "do it", "go ahead", "execute", "run", "start", "thanks", "would ya", "please", "okay?", "proceed", "continue", "go on", "do that", "go it", "do you understand?"
 ```
 
 ## Configuração
 
-Exemplo de config:
+Exemplo de configuração:
 ```
 [MAIN]
 is_local = True
 provider_name = ollama
 provider_model = deepseek-r1:32b
-provider_server_address = 127.0.0.1:11434
+provider_server_address = http://127.0.0.1:11434 # Exemplo Ollama; LM-Studio usa http://127.0.0.1:1234
 agent_name = Friday
 recover_last_session = False
 save_session = False
 speak = False
 listen = False
+
 jarvis_personality = False
-languages = en zh
+languages = en zh # Lista de idiomas para TTS e roteamento potencial.
 [BROWSER]
 headless_browser = False
 stealth_mode = False
 ```
 
-**Explicação**:
+**Explicação das configurações de `config.ini`**:
 
-- is_local -> Roda o agente localmente (True) ou em servidor remoto (False).
+*   **Seção `[MAIN]`:**
+    *   `is_local`: `True` se você estiver usando provedores de LLM locais (Ollama, LM-Studio, servidor local compatível com OpenAI) ou a opção de servidor auto-hospedado. `False` se você estiver usando APIs baseadas em nuvem (OpenAI, Google, etc.).
+    *   `provider_name`: Especifica o provedor de LLM.
+        *   Opções locais: `ollama`, `lm-studio`, `openai` (para servidor local compatível com OpenAI), `server` (para configuração de servidor auto-hospedado).
+        *   Opções de API: `openai`, `google`, `deepseek`, `huggingface`, `togetherAI`.
+    *   `provider_model`: Nome ou ID específico do modelo do provedor selecionado (ex: `deepseekcoder:6.7b` para Ollama, `gpt-3.5-turbo` para API OpenAI, `mistralai/Mixtral-8x7B-Instruct-v0.1` para TogetherAI).
+    *   `provider_server_address`: O endereço do seu provedor de LLM.
+        *   Para provedores locais: ex: `http://127.0.0.1:11434` para Ollama, `http://127.0.0.1:1234` para LM-Studio.
+        *   Para o tipo de provedor `server`: O endereço do seu servidor LLM auto-hospedado (ex: `http://your_server_ip:3333`).
+        *   Para APIs em nuvem (`is_local = False`): Isso geralmente é ignorado ou pode ser deixado em branco, pois os endpoints da API são geralmente gerenciados pelas bibliotecas do provedor correspondente.
+    *   `agent_name`: O nome do assistente de IA (ex: Friday). Se ativado, usado como palavra de gatilho para fala para texto.
+    *   `recover_last_session`: `True` para tentar recuperar o estado da sessão anterior, `False` para começar do zero.
+    *   `save_session`: `True` para salvar o estado da sessão atual para possível recuperação, `False` caso contrário.
+    *   `speak`: `True` para ativar a saída de voz de texto para fala, `False` para desativar.
+    *   `listen`: `True` para ativar a entrada de voz de fala para texto (apenas modo CLI), `False` para desativar.
+    *   `work_dir`: **Crítico:** O diretório onde o AgenticSeek lerá/escreverá arquivos. **Certifique-se de que este caminho é válido e acessível no seu sistema.**
+    *   `jarvis_personality`: `True` para usar prompts de sistema mais "Jarvis-like" (experimental), `False` para usar prompts padrão.
+    *   `languages`: Lista de idiomas separados por vírgulas (ex: `en, zh, fr`). Usado para seleção de voz TTS (primeira por padrão) e pode ajudar o roteador LLM. Para evitar ineficiências do roteador, evite usar muitos idiomas ou idiomas muito semelhantes.
+*   **Seção `[BROWSER]`:**
+    *   `headless_browser`: `True` para executar o navegador automatizado sem janela visível (recomendado para interface web ou uso não interativo). `False` para exibir a janela do navegador (útil para modo CLI ou depuração).
+    *   `stealth_mode`: `True` para ativar medidas que tornam mais difícil a detecção da automação do navegador. Pode exigir instalação manual de extensões de navegador como anticaptcha.
 
-- provider_name -> Provedor a ser usado (um de: `ollama`, `server`, `lm-studio`, `deepseek-api`)
+Esta seção resume os tipos de provedores de LLM suportados. Configure-os em `config.ini`.
 
-- provider_model -> Modelo usado, ex: deepseek-r1:32b.
+**Provedores locais (executando em seu próprio hardware):**
 
-- provider_server_address -> Endereço do servidor, ex: 127.0.0.1:11434 para local. Qualquer valor para API não local.
+| Nome do provedor em config.ini | `is_local` | Descrição                                                                 | Seção de configuração                                                    |
+|-------------------------------|------------|-----------------------------------------------------------------------------|------------------------------------------------------------------|
+| `ollama`                      | `True`     | Fornece LLM localmente facilmente usando Ollama.                                             | [Configuração para executar LLM localmente na sua máquina](#configuração-para-executar-llm-localmente-na-sua-máquina) |
+| `lm-studio`                   | `True`     | Fornece LLM localmente com LM-Studio.                                          | [Configuração para executar LLM localmente na sua máquina](#configuração-para-executar-llm-localmente-na-sua-máquina) |
+| `openai` (para servidor local)   | `True`     | Conecte-se a um servidor local expondo uma API compatível com OpenAI (ex: llama.cpp). | [Configuração para executar LLM localmente na sua máquina](#configuração-para-executar-llm-localmente-na-sua-máquina) |
+| `server`                      | `False`    | Conecte-se ao servidor LLM auto-hospedado do AgenticSeek em execução em outra máquina. | [Configuração para executar LLM em seu próprio servidor](#configuração-para-executar-llm-em-seu-próprio-servidor) |
 
-- agent_name -> Nome do agente, ex: Friday. Usado como palavra-chave para TTS.
+**Provedores de API (baseados em nuvem):**
 
-- recover_last_session -> Retoma da última sessão (True) ou não (False).
+| Nome do provedor em config.ini | `is_local` | Descrição                                      | Seção de configuração                                       |
+|-------------------------------|------------|--------------------------------------------------|-----------------------------------------------------|
+| `openai`                      | `False`    | Use a API oficial da OpenAI (ex: GPT-3.5, GPT-4). | [Configuração para executar com uma API](#configuração-para-executar-com-uma-api) |
+| `google`                      | `False`    | Use os modelos Google Gemini via API.              | [Configuração para executar com uma API](#configuração-para-executar-com-uma-api) |
+| `deepseek`                    | `False`    | Use a API oficial da Deepseek.                     | [Configuração para executar com uma API](#configuração-para-executar-com-uma-api) |
+| `huggingface`                 | `False`    | Use Hugging Face Inference API.                  | [Configuração para executar com uma API](#configuração-para-executar-com-uma-api) |
+| `togetherAI`                  | `False`    | Use vários modelos abertos via API TogetherAI.    | [Configuração para executar com uma API](#configuração-para-executar-com-uma-api) |
 
-- save_session -> Salva dados da sessão (True) ou não (False).
+---
+## Solução de problemas
 
-- speak -> Ativa saída de voz (True) ou não (False).
-
-- listen -> Ativa entrada por voz (True) ou não (False).
-
-- jarvis_personality -> Usa personalidade tipo JARVIS (True) ou não (False). Apenas muda o prompt.
-
-- languages -> Lista de idiomas suportados, necessário para o roteador de LLM funcionar corretamente. Evite muitos idiomas ou muito parecidos.
-
-- headless_browser -> Roda navegador sem janela visível (True) ou não (False).
-
-- stealth_mode -> Dificulta detecção de bot. Único contra é instalar manualmente a extensão anticaptcha.
-
-- languages -> Lista de idiomas suportados. Necessário para o sistema de roteamento de agentes. Quanto maior a lista, mais modelos serão baixados.
-
-## Provedores
-
-Tabela de provedores disponíveis:
-
-| Provedor   | Local? | Descrição                                               |
-|------------|--------|---------------------------------------------------------|
-| ollama     | Sim    | Rode LLMs localmente facilmente usando ollama           |
-| server     | Sim    | Hospede o modelo em outra máquina, use localmente       |
-| lm-studio  | Sim    | Rode LLM localmente com LM studio (`lm-studio`)         |
-| openai     | Depende| Use API do ChatGPT (não privado) ou API compatível      |
-| deepseek-api| Não   | API Deepseek (não privado)                              |
-| huggingface| Não    | API Hugging-Face (não privado)                          |
-| togetherAI | Não    | Use API together AI (não privado)                       |
-| google     | Não    | Use API google gemini (não privado)                     |
-
-Para selecionar um provedor, altere o config.ini:
-
-```
-is_local = True
-provider_name = ollama
-provider_model = deepseek-r1:32b
-provider_server_address = 127.0.0.1:5000
-```
-`is_local`: deve ser True para qualquer LLM rodando localmente, senão False.
-
-`provider_name`: Selecione o provedor pelo nome, veja a lista acima.
-
-`provider_model`: Defina o modelo a ser usado pelo agente.
-
-`provider_server_address`: pode ser qualquer valor se não usar o provedor server.
+Se você encontrar problemas, esta seção fornece orientações.
 
 # Problemas conhecidos
 
-## Problemas com Chromedriver
+## Problemas do ChromeDriver
 
-**Erro conhecido #1:** *chromedriver incompatível*
+**Exemplo de erro:** `SessionNotCreatedException: Message: session not created: This version of ChromeDriver only supports Chrome version XXX`
+
+### Causa raiz
+A incompatibilidade de versão do ChromeDriver ocorre quando:
+1. A versão do ChromeDriver que você instalou não corresponde à versão do navegador Chrome
+2. Em ambientes Docker, `undetected_chromedriver` pode baixar sua própria versão do ChromeDriver, contornando os binários montados
+
+### Etapas de solução
+
+#### 1. Verifique sua versão do Chrome
+Abra o Google Chrome → `Configurações > Sobre o Chrome` para encontrar sua versão (ex: "Versão 134.0.6998.88")
+
+#### 2. Baixe o ChromeDriver correspondente
+
+**Para Chrome 115 e superior:** Use [Chrome for Testing API](https://googlechromelabs.github.io/chrome-for-testing/)
+- Visite o painel de disponibilidade do Chrome for Testing
+- Encontre sua versão do Chrome ou a correspondência disponível mais próxima
+- Baixe o ChromeDriver para seu sistema operacional (use Linux64 para ambientes Docker)
+
+**Para versões mais antigas do Chrome:** Use [Downloads legados do ChromeDriver](https://chromedriver.chromium.org/downloads)
+
+![Baixar ChromeDriver do Chrome for Testing](./media/chromedriver_readme.png)
+
+#### 3. Instale o ChromeDriver (escolha um método)
+
+**Método A: Diretório raiz do projeto (recomendado para Docker)**
+```bash
+# Coloque o binário chromedriver baixado no diretório raiz do projeto
+cp path/to/downloaded/chromedriver ./chromedriver
+chmod +x ./chromedriver  # Torne-o executável no Linux/macOS
+```
+
+**Método B: PATH do sistema**
+```bash
+# Linux/macOS
+sudo mv chromedriver /usr/local/bin/
+sudo chmod +x /usr/local/bin/chromedriver
+
+# Windows: Coloque chromedriver.exe em uma pasta do PATH
+```
+
+#### 4. Verifique a instalação
+```bash
+# Teste a versão do ChromeDriver
+./chromedriver --version
+# Ou se estiver no PATH:
+chromedriver --version
+```
+
+### Instruções específicas do Docker
+
+⚠️ **Importante para usuários do Docker:**
+- O método de montagem de volumes do Docker pode não funcionar com o modo furtivo (`undetected_chromedriver`)
+- **Solução:** Coloque o ChromeDriver no diretório raiz do projeto como `./chromedriver`
+- O aplicativo o detectará automaticamente e usará este binário
+- Você deve ver nos logs: `"Using ChromeDriver from project root: ./chromedriver"`
+
+### Dicas de solução de problemas
+
+1. **Ainda há incompatibilidade de versão?**
+   - Verifique se o ChromeDriver é executável: `ls -la ./chromedriver`
+   - Verifique a versão do ChromeDriver: `./chromedriver --version`
+   - Certifique-se de que corresponde à versão do seu navegador Chrome
+
+2. **Problemas com o contêiner Docker?**
+   - Verifique os logs do backend: `docker logs backend`
+   - Procure a mensagem: `"Using ChromeDriver from project root"`
+   - Se não for encontrado, verifique se o arquivo existe e é executável
+
+3. **Versões do Chrome for Testing**
+   - Use uma correspondência exata quando possível
+   - Para a versão 134.0.6998.88, use o ChromeDriver 134.0.6998.165 (a versão disponível mais próxima)
+   - O número da versão principal deve corresponder (134 = 134)
+
+### Matriz de compatibilidade de versões
+
+| Versão do Chrome | Versão do ChromeDriver | Status |
+|----------------|---------------------|---------|
+| 134.0.6998.x   | 134.0.6998.165     | ✅ Disponível |
+| 133.0.6943.x   | 133.0.6943.141     | ✅ Disponível |
+| 132.0.6834.x   | 132.0.6834.159     | ✅ Disponível |
+
+*Para a compatibilidade mais recente, consulte o [Painel do Chrome for Testing](https://googlechromelabs.github.io/chrome-for-testing/)*
 
 `Exception: Failed to initialize browser: Message: session not created: This version of ChromeDriver only supports Chrome version 113
 Current browser version is 134.0.6998.89 with binary path`
 
-Isso ocorre se houver incompatibilidade entre seu navegador e a versão do chromedriver.
+Isso acontece se seu navegador e a versão do chromedriver não corresponderem.
 
-Você precisa baixar a versão mais recente:
+Você precisa navegar para baixar a versão mais recente:
 
 https://developer.chrome.com/docs/chromedriver/downloads
 
-Se estiver usando Chrome versão 115 ou superior, acesse:
+Se você estiver usando o Chrome versão 115 ou superior, vá para:
 
 https://googlechromelabs.github.io/chrome-for-testing/
 
-E baixe o chromedriver correspondente ao seu sistema operacional.
+e baixe a versão do chromedriver correspondente ao seu sistema operacional.
 
 ![alt text](./media/chromedriver_readme.png)
 
-Se esta seção estiver incompleta, abra uma issue.
+Se esta seção estiver incompleta, abra um issue.
 
-## Problemas de adaptadores de conexão
+##  Problemas de adaptadores de conexão
 
 ```
-Exception: Provider lm-studio failed: HTTP request failed: No connection adapters were found for '127.0.0.1:11434/v1/chat/completions'
+Exception: Provider lm-studio failed: HTTP request failed: No connection adapters were found for '127.0.0.1:1234/v1/chat/completions'` (nota: a porta pode variar)
 ```
 
-Certifique-se de ter `http://` antes do IP do provedor:
+*   **Causa:** Falta o prefixo `http://` em `provider_server_address` para `lm-studio` (ou outro servidor local compatível com OpenAI semelhante) no `config.ini`, ou ele aponta para a porta errada.
+*   **Solução:**
+    *   Certifique-se de que o endereço inclui `http://`. O LM-Studio geralmente usa `http://127.0.0.1:1234` por padrão.
+    *   `config.ini` correto: `provider_server_address = http://127.0.0.1:1234` (ou sua porta real do servidor LM-Studio).
 
-`provider_server_address = http://127.0.0.1:11434`
-
-## SearxNG base URL deve ser fornecida
+## URL base do SearxNG não fornecida
 
 ```
 raise ValueError("SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable.")
-ValueError: SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable.
+ValueError: SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable.`
 ```
 
-Talvez você não tenha movido `.env.example` para `.env`? Você também pode exportar SEARXNG_BASE_URL:
+Isso pode acontecer se você executar o modo CLI com uma URL base do searxng incorreta.
 
-`export  SEARXNG_BASE_URL="http://127.0.0.1:8080"`
+SEARXNG_BASE_URL deve diferir dependendo se você está executando no Docker ou no host:
+
+**Execução no host:** `SEARXNG_BASE_URL="http://localhost:8080"`
+
+**Execução completamente no Docker (interface web):** `SEARXNG_BASE_URL="http://searxng:8080"`
 
 ## FAQ
 
-**P: Que hardware eu preciso?**  
+**P: De qual hardware eu preciso?**  
 
-| Tamanho do Modelo | GPU         | Comentário                                               |
-|-------------------|-------------|---------------------------------------------------------|
-| 7B                | 8GB Vram    | ⚠️ Não recomendado. Desempenho ruim, alucinações frequentes, agentes de planejamento podem falhar. |
-| 14B               | 12 GB VRAM (ex: RTX 3060) | ✅ Usável para tarefas simples. Pode ter dificuldades com navegação web e planejamento. |
-| 32B               | 24+ GB VRAM (ex: RTX 4090) | 🚀 Sucesso na maioria das tarefas, pode ainda ter dificuldades com planejamento |
-| 70B+              | 48+ GB Vram (ex: mac studio) | 💪 Excelente. Recomendado para uso avançado. |
+| Tamanho do modelo  | GPU  | Comentários                                               |
+|-----------|--------|-----------------------------------------------------------|
+| 7B        | 8GB VRAM | ⚠️ Não recomendado. Desempenho ruim, alucinações frequentes, agentes de planejamento podem falhar. |
+| 14B        | 12 GB VRAM (ex: RTX 3060) | ✅ Utilizável para tarefas simples. Pode ter dificuldades com navegação web e planejamento de tarefas. |
+| 32B        | 24+ GB VRAM (ex: RTX 4090) | 🚀 Consegue a maioria das tarefas, ainda pode ter dificuldades com planejamento de tarefas |
+| 70B+        | 48+ GB VRAM | 💪 Excelente. Recomendado para casos de uso avançados. |
 
-**P: Por que Deepseek R1 em vez de outros modelos?**  
+**P: O que fazer se eu encontrar erros?**  
 
-Deepseek R1 se destaca em raciocínio e uso de ferramentas para seu tamanho. Achamos que é uma ótima escolha para nossas necessidades, outros modelos funcionam bem, mas Deepseek é nossa principal escolha.
+Certifique-se de que o local está funcionando (`ollama serve`), que seu `config.ini` corresponde ao seu provedor e que as dependências estão instaladas. Se nada funcionar, sinta-se à vontade para abrir um issue.
 
-**P: Recebo erro ao rodar `cli.py`. O que faço?**  
+**P: Ele pode realmente funcionar 100% localmente?**  
 
-Certifique-se de que o local está rodando (`ollama serve`), seu `config.ini` corresponde ao provedor e as dependências estão instaladas. Se nada funcionar, abra uma issue.
+Sim, com os provedores Ollama, lm-studio ou server, todos os modelos de fala para texto, LLM e texto para fala funcionam localmente. As opções não locais (OpenAI ou outras APIs) são opcionais.
 
-**P: Pode rodar 100% localmente mesmo?**  
+**P: Por que eu deveria usar o AgenticSeek quando tenho o Manus?**
 
-Sim, com Ollama, lm-studio ou provedores server, todo o reconhecimento de fala, LLM e TTS rodam localmente. Opções não locais (OpenAI ou outras APIs) são opcionais.
+Ao contrário do Manus, o AgenticSeek prioriza a independência de sistemas externos, dando a você mais controle, privacidade e evitando custos de API.
 
-**P: Por que usar AgenticSeek se já tenho Manus?**
+**P: Quem está por trás deste projeto?**
 
-Começou como um projeto paralelo por interesse em agentes de IA. O diferencial é usar modelos locais e evitar APIs.
-Nos inspiramos em Jarvis e Friday (filmes do Homem de Ferro) para torná-lo "legal", mas funcionalmente nos inspiramos mais no Manus, pois é isso que as pessoas querem: uma alternativa local ao Manus.
-Ao contrário do Manus, o AgenticSeek prioriza independência de sistemas externos, dando mais controle, privacidade e evitando custos de API.
+Este projeto foi criado por mim, com dois amigos como mantenedores e contribuidores da comunidade de código aberto no GitHub. Somos apenas indivíduos apaixonados, não uma startup, nem afiliados a qualquer organização.
 
-## Contribua
+Qualquer conta AgenticSeek no X diferente da minha conta pessoal (https://x.com/Martin993886460) é um impostor.
 
-Procuramos desenvolvedores para melhorar o AgenticSeek! Veja as issues abertas ou discussões.
+## Contribuir
+
+Estamos procurando desenvolvedores para melhorar o AgenticSeek! Verifique os problemas abertos ou discussões.
 
 [Guia de contribuição](./docs/CONTRIBUTING.md)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+## Patrocinadores:
+
+Você quer melhorar as capacidades do AgenticSeek com recursos como pesquisa de voos, planejamento de viagens ou obtenção das melhores ofertas de compra? Considere usar o SerpApi para criar ferramentas personalizadas que desbloqueiem mais recursos do tipo Jarvis. Com o SerpApi, você pode acelerar seu agente para tarefas profissionais enquanto mantém o controle total.
+
+<a href="https://serpapi.com/"><img src="./media/banners/sponsor_banner_serpapi.png" height="350" alt="SerpApi Banner" ></a>
+
+Confira [Contributing.md](./docs/CONTRIBUTING.md) para aprender como integrar ferramentas personalizadas!
+
+### **Patrocinadores**:
+
+- [tatra-labs](https://github.com/tatra-labs)
 
 ## Mantenedores:
 
@@ -538,9 +675,8 @@ Procuramos desenvolvedores para melhorar o AgenticSeek! Veja as issues abertas o
 
  > [antoineVIVIES](https://github.com/antoineVIVIES) | Horário de Taipei 
 
- > [steveh8758](https://github.com/steveh8758) | Horário de Taipei 
+## Agradecimentos especiais:
 
-## Agradecimentos Especiais:
+ > [tcsenpai](https://github.com/tcsenpai) e [plitc](https://github.com/plitc) por ajudar na dockerização do backend
 
- > [tcsenpai](https://github.com/tcsenpai) e [plitc](https://github.com/plitc) pela ajuda na dockerização do backend
-
+[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)

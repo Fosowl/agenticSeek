@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
@@ -15,6 +15,7 @@ import undetected_chromedriver as uc
 import chromedriver_autoinstaller
 import certifi
 import ssl
+import subprocess
 import time
 import random
 import os
@@ -76,22 +77,71 @@ def get_random_user_agent() -> str:
     ]
     return random.choice(user_agents)
 
+def get_chromedriver_version(chromedriver_path: str) -> str:
+    """Get the major version of a chromedriver binary. Returns empty string on failure."""
+    try:
+        result = subprocess.run(
+            [chromedriver_path, "--version"],
+            capture_output=True, text=True, timeout=10
+        )
+        # Output format: "ChromeDriver 125.0.6422.78 (...)"
+        return result.stdout.strip().split()[1].split('.')[0]
+    except Exception:
+        return ""
+
+def is_chromedriver_compatible(chromedriver_path: str) -> bool:
+    """Check if a chromedriver binary is compatible with the installed Chrome version."""
+    try:
+        chrome_version = chromedriver_autoinstaller.get_chrome_version()
+        if not chrome_version:
+            return True  # Can't determine Chrome version, assume compatible
+        chrome_major = chrome_version.split('.')[0]
+        driver_major = get_chromedriver_version(chromedriver_path)
+        if not driver_major:
+            return True  # Can't determine driver version, assume compatible
+        return chrome_major == driver_major
+    except Exception:
+        return True  # On any error, assume compatible to avoid blocking
+
 def install_chromedriver() -> str:
     """
     Install the ChromeDriver if not already installed. Return the path.
+    Automatically updates the driver if the version does not match the installed Chrome.
     """
+    # First try to use chromedriver in the project root directory (as per README)
+    project_root_chromedriver = "./chromedriver"
+    if os.path.exists(project_root_chromedriver) and os.access(project_root_chromedriver, os.X_OK):
+        if is_chromedriver_compatible(project_root_chromedriver):
+            print(f"Using ChromeDriver from project root: {project_root_chromedriver}")
+            return project_root_chromedriver
+        print("ChromeDriver in project root is outdated, attempting auto-update...")
+    
+    # Then try to use the system-installed chromedriver
     chromedriver_path = shutil.which("chromedriver")
-    if not chromedriver_path:
-        try:
-            print("ChromeDriver not found, attempting to install automatically...")
-            chromedriver_path = chromedriver_autoinstaller.install()
-        except Exception as e:
-            raise FileNotFoundError(
-                "ChromeDriver not found and could not be installed automatically. "
-                "Please install it manually from https://chromedriver.chromium.org/downloads."
-                "and ensure it's in your PATH or specify the path directly."
-                "See know issues in readme if your chrome version is above 115."
-            ) from e
+    if chromedriver_path:
+        if is_chromedriver_compatible(chromedriver_path):
+            return chromedriver_path
+        print(f"System ChromeDriver at {chromedriver_path} is outdated, attempting auto-update...")
+    
+    # In Docker environment, try the fixed path
+    if os.path.exists('/.dockerenv'):
+        docker_chromedriver_path = "/usr/local/bin/chromedriver"
+        if os.path.exists(docker_chromedriver_path) and os.access(docker_chromedriver_path, os.X_OK):
+            print(f"Using Docker ChromeDriver at {docker_chromedriver_path}")
+            return docker_chromedriver_path
+    
+    # Auto-install matching ChromeDriver version
+    try:
+        print("Installing matching ChromeDriver version automatically...")
+        chromedriver_path = chromedriver_autoinstaller.install()
+    except Exception as e:
+        raise FileNotFoundError(
+            "ChromeDriver not found and could not be installed automatically. "
+            "Please install it manually from https://chromedriver.chromium.org/downloads."
+            "and ensure it's in your PATH or specify the path directly."
+            "See know issues in readme if your chrome version is above 115."
+        ) from e
+    
     if not chromedriver_path:
         raise FileNotFoundError("ChromeDriver not found. Please install it or add it to your PATH.")
     return chromedriver_path
@@ -103,29 +153,8 @@ def bypass_ssl() -> str:
     pretty_print("Bypassing SSL verification issues, we strongly advice you update your certifi SSL certificate.", color="warning")
     ssl._create_default_https_context = ssl._create_unverified_context
 
-def create_undetected_chromedriver(service, chrome_options) -> webdriver.Chrome:
-    """Create an undetected ChromeDriver instance."""
-    try:
-        driver = uc.Chrome(service=service, options=chrome_options)
-    except Exception as e:
-        pretty_print(f"Failed to create Chrome driver: {str(e)}. Trying to bypass SSL...", color="failure")
-        try:
-            bypass_ssl()
-            driver = uc.Chrome(service=service, options=chrome_options)
-        except Exception as e:
-            pretty_print(f"Failed to create Chrome driver, fallback failed:\n{str(e)}.", color="failure")
-            raise e
-        raise e
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
-    return driver
-
-def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> webdriver.Chrome:
-    """Create a Chrome WebDriver with specified options."""
-    # Warn if trying to run non-headless in Docker
-    if not headless and os.path.exists('/.dockerenv'):
-        print("[WARNING] Running non-headless browser in Docker may fail!")
-        print("[WARNING] Consider setting headless=True or headless_browser=True in config.ini")
-    
+def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> Options:
+    """Create Chrome options - separated for reusability."""
     chrome_options = Options()
     chrome_path = get_chrome_path()
     
@@ -134,17 +163,17 @@ def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx
     chrome_options.binary_location = chrome_path
     
     if headless:
-        #chrome_options.add_argument("--headless")
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-webgl")
-    user_data_dir = tempfile.mkdtemp()
+    
     user_agent = get_random_user_agent()
     width, height = (1920, 1080)
-    user_data_dir = tempfile.mkdtemp(prefix="chrome_profile_")
+    profile_dir = f"/tmp/chrome_profile_{uuid.uuid4().hex[:8]}"
+    
+    # Core options
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument('--disable-dev-shm-usage')
-    profile_dir = f"/tmp/chrome_profile_{uuid.uuid4().hex[:8]}"
     chrome_options.add_argument(f'--user-data-dir={profile_dir}')
     chrome_options.add_argument(f"--accept-lang={lang}-{lang.upper()},{lang};q=0.9")
     chrome_options.add_argument("--disable-extensions")
@@ -164,19 +193,76 @@ def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument(f'user-agent={user_agent["ua"]}')
     chrome_options.add_argument(f'--window-size={width},{height}')
+    
     if not stealth_mode:
         if not os.path.exists(crx_path):
             pretty_print(f"Anti-captcha CRX not found at {crx_path}.", color="failure")
         else:
             chrome_options.add_extension(crx_path)
+    
+    if not stealth_mode:
+        security_prefs = {
+            "profile.default_content_setting_values.geolocation": 0,
+            "profile.default_content_setting_values.notifications": 0,
+            "profile.default_content_setting_values.camera": 0,
+            "profile.default_content_setting_values.microphone": 0,
+            "profile.default_content_setting_values.midi_sysex": 0,
+            "profile.default_content_setting_values.clipboard": 0,
+            "profile.default_content_setting_values.media_stream": 0,
+            "profile.default_content_setting_values.background_sync": 0,
+            "profile.default_content_setting_values.sensors": 0,
+            "profile.default_content_setting_values.accessibility_events": 0,
+            "safebrowsing.enabled": True,
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "webkit.webprefs.accelerated_2d_canvas_enabled": True,
+            "webkit.webprefs.force_dark_mode_enabled": False,
+            "webkit.webprefs.accelerated_2d_canvas_msaa_sample_count": 4,
+            "enable_webgl": True,
+            "enable_webgl2_compute_context": True
+        }
+        chrome_options.add_experimental_option("prefs", security_prefs)
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+    
+    return chrome_options
 
+def create_undetected_chromedriver(service, chrome_options) -> webdriver.Chrome:
+    """Create an undetected ChromeDriver instance with proper error handling."""
+    try:
+        driver = uc.Chrome(service=service, options=chrome_options)
+    except Exception as e:
+        pretty_print(f"Failed to create Chrome driver: {str(e)}. Trying to bypass SSL...", color="failure")
+        try:
+            bypass_ssl()
+            # Create NEW options object - this is the key fix
+            fresh_options = create_chrome_options(
+                headless=any("--headless" in arg for arg in chrome_options.arguments),
+                stealth_mode=True,  # We're in stealth mode if we reach this point
+                crx_path="./crx/nopecha.crx"  # Default path
+            )
+            driver = uc.Chrome(service=service, options=fresh_options)
+        except Exception as e:
+            pretty_print(f"Failed to create Chrome driver, fallback failed:\n{str(e)}.", color="failure")
+            raise e
+    
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+    return driver
+
+def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> webdriver.Chrome:
+    """Create a Chrome WebDriver with specified options."""
+    # Warn if trying to run non-headless in Docker
+    if not headless and os.path.exists('/.dockerenv'):
+        print("[WARNING] Running non-headless browser in Docker may fail!")
+        print("[WARNING] Consider setting headless=True or headless_browser=True in config.ini")
+    
+    chrome_options = create_chrome_options(headless, stealth_mode, crx_path, lang)
     chromedriver_path = install_chromedriver()
-
     service = Service(chromedriver_path)
+    
     if stealth_mode:
-        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         driver = create_undetected_chromedriver(service, chrome_options)
-        chrome_version = driver.capabilities['browserVersion']
+        user_agent = get_random_user_agent()
         stealth(driver,
             languages=["en-US", "en"],
             vendor=user_agent["vendor"],
@@ -186,30 +272,8 @@ def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx
             fix_hairline=True,
         )
         return driver
-    security_prefs = {
-        "profile.default_content_setting_values.geolocation": 0,
-        "profile.default_content_setting_values.notifications": 0,
-        "profile.default_content_setting_values.camera": 0,
-        "profile.default_content_setting_values.microphone": 0,
-        "profile.default_content_setting_values.midi_sysex": 0,
-        "profile.default_content_setting_values.clipboard": 0,
-        "profile.default_content_setting_values.media_stream": 0,
-        "profile.default_content_setting_values.background_sync": 0,
-        "profile.default_content_setting_values.sensors": 0,
-        "profile.default_content_setting_values.accessibility_events": 0,
-        "safebrowsing.enabled": True,
-        "credentials_enable_service": False,
-        "profile.password_manager_enabled": False,
-        "webkit.webprefs.accelerated_2d_canvas_enabled": True,
-        "webkit.webprefs.force_dark_mode_enabled": False,
-        "webkit.webprefs.accelerated_2d_canvas_msaa_sample_count": 4,
-        "enable_webgl": True,
-        "enable_webgl2_compute_context": True
-    }
-    chrome_options.add_experimental_option("prefs", security_prefs)
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    return webdriver.Chrome(service=service, options=chrome_options)
+    else:
+        return webdriver.Chrome(service=service, options=chrome_options)
 
 class Browser:
     def __init__(self, driver, anticaptcha_manual_install=False):
@@ -466,7 +530,16 @@ class Browser:
                 if input_type in ["hidden", "submit", "button", "image"] or not element["displayed"]:
                     continue
                 input_name = element.get("text") or element.get("id") or input_type
-                if input_type == "checkbox" or input_type == "radio":
+                if input_type == "select":
+                    options = element.get("options", [])
+                    options_str = ", ".join(opt["text"] for opt in options if opt["text"])
+                    selected = next((opt["text"] for opt in options if opt.get("selected")), "")
+                    form_strings.append(f"[{input_name}](select: {selected}) options: [{options_str}]")
+                elif input_type == "textarea":
+                    form_strings.append(f"[{input_name}]("")")
+                elif input_type == "file":
+                    form_strings.append(f"[{input_name}](file: )")
+                elif input_type == "checkbox" or input_type == "radio":
                     try:
                         checked_status = "checked" if element.is_selected() else "unchecked"
                     except Exception as e:
@@ -630,7 +703,29 @@ class Browser:
                     self.logger.warning(f"Element '{name}' is not interactable (not displayed or disabled)")
                     continue
                 input_type = (element.get_attribute("type") or "text").lower()
-                if input_type in ["checkbox", "radio"]:
+                tag_name = (element.tag_name or "").lower()
+                if tag_name == "select":
+                    try:
+                        select = Select(element)
+                        select.select_by_visible_text(value)
+                        self.logger.info(f"Selected '{value}' for {name}")
+                    except Exception:
+                        try:
+                            select.select_by_value(value)
+                            self.logger.info(f"Selected value '{value}' for {name}")
+                        except Exception as sel_e:
+                            self.logger.warning(f"Could not select '{value}' for {name}: {sel_e}")
+                elif tag_name == "textarea":
+                    element.clear()
+                    element.send_keys(value)
+                    self.logger.info(f"Filled textarea {name}")
+                elif input_type == "file":
+                    if os.path.isabs(value) and os.path.exists(value):
+                        element.send_keys(value)
+                        self.logger.info(f"Uploaded file '{value}' for {name}")
+                    else:
+                        self.logger.warning(f"File not found: {value}")
+                elif input_type in ["checkbox", "radio"]:
                     is_checked = element.is_selected()
                     should_be_checked = value.lower() == "checked"
 

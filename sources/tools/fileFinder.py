@@ -83,7 +83,7 @@ class FileFinder(Tools):
         else:
             return {"filename": file_path, "error": "File not found"}
     
-    def recursive_search(self, directory_path: str, filename: str) -> str | None:
+    def recursive_search(self, directory_path: str, filename: str) -> str:
         """
         Recursively searches for files in a directory and its subdirectories.
         Args:

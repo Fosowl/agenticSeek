@@ -11,6 +11,37 @@ function findInputs(element, result = []) {
             displayed: isElementDisplayed(input)
         });
     });
+    // Find all <select> elements (dropdowns / multi-choice)
+    const selects = element.querySelectorAll('select');
+    selects.forEach(select => {
+        const options = Array.from(select.options).map(opt => ({
+            value: opt.value,
+            text: opt.textContent.trim(),
+            selected: opt.selected
+        }));
+        result.push({
+            tagName: select.tagName,
+            text: select.name || '',
+            type: 'select',
+            class: select.className || '',
+            xpath: getXPath(select),
+            displayed: isElementDisplayed(select),
+            multiple: select.multiple,
+            options: options
+        });
+    });
+    // Find all <textarea> elements
+    const textareas = element.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        result.push({
+            tagName: textarea.tagName,
+            text: textarea.name || '',
+            type: 'textarea',
+            class: textarea.className || '',
+            xpath: getXPath(textarea),
+            displayed: isElementDisplayed(textarea)
+        });
+    });
     const allElements = element.querySelectorAll('*');
     allElements.forEach(el => {
         if (el.shadowRoot) {

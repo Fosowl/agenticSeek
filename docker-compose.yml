@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   redis:
@@ -35,7 +35,7 @@ services:
     environment:
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8080/}
       - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY}
-      - UWSGI_WORKERS=5
+      - UWSGI_WORKERS=4
       - UWSGI_THREADS=4
     cap_add:
       - CHOWN
@@ -65,7 +65,7 @@ services:
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_BACKEND_URL=http://host.docker.internal:${BACKEND_PORT:-7777}
+      - REACT_APP_BACKEND_URL=http://localhost:7777
     networks:
       - agentic-seek-net
 
@@ -77,9 +77,6 @@ services:
       dockerfile: Dockerfile.backend
     ports:
       - ${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
-      - ${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}
-      - ${LM_STUDIO_PORT:-1234}:${LM_STUDIO_PORT:-1234}
-      - ${CUSTOM_ADDITIONAL_LLM_PORT:-8000}:${CUSTOM_ADDITIONAL_LLM_PORT:-8000}
     volumes:
       - ./:/app
       - ${WORK_DIR:-.}:/opt/workspace

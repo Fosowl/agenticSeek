@@ -63,6 +63,7 @@ class Speech():
             voice_idx (int, optional): Index of the voice to use from the voice map.
         """
         if not self.pipeline or not IMPORT_FOUND:
+            print("Pipeline disabled.")
             return
         if voice_idx >= len(self.voice_map[self.language]):
             pretty_print("Invalid voice number, using default voice", color="error")

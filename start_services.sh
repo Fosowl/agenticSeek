@@ -16,12 +16,12 @@ else
     dir_size_bytes=$(du -s --bytes "$WORK_DIR" 2>/dev/null | awk '{print $1}')
 fi
 
-max_size_bytes=$((2 * 1024 * 1024 * 1024))
+max_size_bytes=$((2 * 1024 * 1024 * 1024 * 10))
 
 echo "Mounting $WORK_DIR ($dir_size_bytes bytes) to docker."
 
 if [ "$dir_size_bytes" -gt "$max_size_bytes" ]; then
-    echo "Error: WORK_DIR ($WORK_DIR) contains more than 2GB of data ($(du -sh "$WORK_DIR" 2>/dev/null | awk '{print $1}'))."
+    echo "Error: WORK_DIR ($WORK_DIR) contains more than 20GB of data ($(du -sh "$WORK_DIR" 2>/dev/null | awk '{print $1}'))."
     exit 1
 fi
 
@@ -64,17 +64,18 @@ else
 fi
 
 # Check if Docker Compose is installed
-if ! command_exists docker-compose && ! docker compose version >/dev/null 2>&1; then
-    echo "Error: Docker Compose is not installed. Please install it first."
-    echo "On Ubuntu: sudo apt install docker-compose"
-    echo "Or via pip: pip install docker-compose"
-    exit 1
-fi
-
-if command_exists docker-compose; then
+# Prefer the newer 'docker compose' command if available
+if docker compose version >/dev/null 2>&1; then
+    echo "Using newer docker compose (v2)."
+    COMPOSE_CMD="docker compose"
+elif command_exists docker-compose; then
+    echo "Using old docker-compose."
     COMPOSE_CMD="docker-compose"
 else
-    COMPOSE_CMD="docker compose"
+    echo "Error: Docker Compose is not installed. Please install it first."
+    echo "On Ubuntu: sudo apt install docker-compose-plugin"
+    echo "Or install Docker Desktop which includes compose v2"
+    exit 1
 fi
 
 # Check if docker-compose.yml exists

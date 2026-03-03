@@ -70,6 +70,29 @@ class Tools():
     def set_allow_language_exec_bash(self, value: bool) -> None:
         self.allow_language_exec_bash = value 
 
+    def safe_get_work_dir_path(self):
+        path = None
+        path = os.getenv('WORK_DIR', path)
+        if path is None or path == "":
+            path = self.config['MAIN']['work_dir'] if 'MAIN' in self.config and 'work_dir' in self.config['MAIN'] else None
+        if path is None or path == "":
+            raise Exception("No work dir specified, please specify a work dir in .env file.")
+        return path
+    
+    def config_exists(self):
+        """Check if the config file exists."""
+        return os.path.exists('./config.ini')
+
+    def create_work_dir(self):
+        """Create the work directory if it does not exist."""
+        default_path = os.path.dirname(os.getcwd())
+        if self.config_exists():
+            self.config.read('./config.ini')
+            workdir_path = self.safe_get_work_dir_path()
+        else:
+            workdir_path = default_path
+        return workdir_path
+
     @abstractmethod
     def execute(self, blocks:[str], safety:bool) -> str:
         """

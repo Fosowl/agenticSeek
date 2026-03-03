@@ -4,7 +4,7 @@
 <img align="center" src="./media/agentic_seek_logo.png" width="300" height="300" alt="Agentic Seek Logo">
 <p>
 
-  English | [中文](./README_CHS.md) | [繁體中文](./README_CHT.md) | [Français](./README_FR.md) | [日本語](./README_JP.md) | [Português (Brasil)](./README_PTBR.md) | [Español](./README_ES.md)
+  English | [中文](./README_CHS.md) | [繁體中文](./README_CHT.md) | [Français](./README_FR.md) | [日本語](./README_JP.md) | [Português (Brasil)](./README_PTBR.md) | [Español](./README_ES.md) | [Türkçe](./README_TR.md)
 
 *A **100% local alternative to Manus AI**, this voice-enabled AI assistant autonomously browses the web, writes code, and plans tasks while keeping all data on your device. Tailored for local reasoning models, it runs entirely on your hardware, ensuring complete privacy and zero cloud dependency.*
 
@@ -57,7 +57,7 @@ mv .env.example .env
 ### 2. Change the .env file content
 
 ```sh
-SEARXNG_BASE_URL="http://127.0.0.1:8080"
+SEARXNG_BASE_URL="http://searxng:8080" # http://127.0.0.1:8080 if running on host
 REDIS_BASE_URL="redis://redis:6379/0"
 WORK_DIR="/Users/mlg/Documents/workspace_for_ai"
 OLLAMA_PORT="11434"
@@ -74,7 +74,7 @@ ANTHROPIC_API_KEY='optional'
 
 Update the `.env` file with your own values as needed:
 
-- **SEARXNG_BASE_URL**: Leave unchanged 
+- **SEARXNG_BASE_URL**: Leave unchanged unless running on host with CLI mode.
 - **REDIS_BASE_URL**: Leave unchanged 
 - **WORK_DIR**: Path to your working directory on your local machine. AgenticSeek will be able to read and interact with these files.
 - **OLLAMA_PORT**: Port number for the Ollama service.
@@ -121,7 +121,15 @@ To run LLMs locally, you'll need sufficient hardware. At a minimum, a GPU capabl
 
 **Setup your local provider**  
 
-Start your local provider, for example with ollama:
+Start your local provider (for example with ollama):
+
+Unless you wish to to run AgenticSeek on host (CLI mode), export or set the provider listen address:
+
+```sh
+export OLLAMA_HOST=0.0.0.0:11434
+```
+
+Then, start you provider:
 
 ```sh
 ollama serve
@@ -231,6 +239,7 @@ provider_server_address = # Typically ignored or can be left blank when is_local
 | Deepseek     | `deepseek`      | No     | Use Deepseek models via their API.                | [platform.deepseek.com](https://platform.deepseek.com) |
 | Hugging Face | `huggingface`   | No     | Use models from Hugging Face Inference API.       | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | TogetherAI   | `togetherAI`    | No     | Use various open-source models via TogetherAI API.| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
+| OpenRouter   | `openrouter`    | No     | Use OpenRouter Models| [https://openrouter.ai/](https://openrouter.ai/) |
 
 *Note:*
 *   We advise against using `gpt-4o` or other OpenAI models for complex web browsing and task planning as current prompt optimizations are geared towards models like Deepseek.
@@ -249,15 +258,17 @@ Next step: [Start services and run AgenticSeek](#Start-services-and-Run)
 
 By default AgenticSeek is run fully in docker.
 
+**Option 1:** Run in Docker, use web interface:
+
 Start required services. This will start all services from the docker-compose.yml, including:
     - searxng
     - redis (required by searxng)
     - frontend
-    - backend (if using `full`)
+    - backend (if using `full` when using the web interface)
 
 ```sh
 ./start_services.sh full # MacOS
-start ./start_services.cmd full # Window
+start start_services.cmd full # Window
 ```
 
 **Warning:** This step will download and load all Docker images, which may take up to 30 minutes. After starting the services, please wait until the backend service is fully running (you should see **backend: "GET /health HTTP/1.1" 200 OK** in the log) before sending any messages. The backend services might take 5 minute to start on first run.
@@ -266,7 +277,7 @@ Go to `http://localhost:3000/` and you should see the web interface.
 
 *Troubleshooting service start:* If these scripts fail, ensure Docker Engine is running and Docker Compose (V2, `docker compose`) is correctly installed. Check the output in the terminal for error messages. See [FAQ: Help! I get an error when running AgenticSeek or its scripts.](#faq-troubleshooting)
 
-**Optional:** Run on host (CLI mode):
+**Option 2:** CLI mode:
 
 To run with CLI interface you would have to install package on host:
 
@@ -275,12 +286,23 @@ To run with CLI interface you would have to install package on host:
 ./install.bat # windows
 ```
 
-Start services:
+Then you must change the SEARXNG_BASE_URL in `config.ini` to:
+
+```sh
+SEARXNG_BASE_URL="http://localhost:8080"
+```
+
+Start required services. This will start some services from the docker-compose.yml, including:
+    - searxng
+    - redis (required by searxng)
+    - frontend
 
 ```sh
 ./start_services.sh # MacOS
-start ./start_services.cmd # Window
+start start_services.cmd # Window
 ```
+
+Run: uv run: `uv run python -m ensurepip` to ensure uv has pip enabled.
 
 Use the CLI: `uv run cli.py`
 
@@ -375,7 +397,7 @@ Set the `provider_server_address` to the ip address of the machine that will run
 is_local = False
 provider_name = server
 provider_model = deepseek-r1:70b
-provider_server_address = x.x.x.x:3333
+provider_server_address = http://x.x.x.x:3333
 ```
 
 
@@ -491,21 +513,87 @@ If you encounter issues, this section provides guidance.
 
 **Error Example:** `SessionNotCreatedException: Message: session not created: This version of ChromeDriver only supports Chrome version XXX`
 
-*   **Cause:** Your installed ChromeDriver version is incompatible with your Google Chrome browser version.
-*   **Solution:**
-    1.  **Check Chrome Version:** Open Google Chrome, go to `Settings > About Chrome` to find your version (e.g., "Version 120.0.6099.110").
-    2.  **Download Matching ChromeDriver:**
-        *   For Chrome versions 115 and newer: Go to the [Chrome for Testing (CfT) JSON Endpoints](https://googlechromelabs.github.io/chrome-for-testing/). Find the "stable" channel and download the ChromeDriver for your OS that matches your Chrome's major version.
-        *   For older versions (less common): You might find them on the [ChromeDriver - WebDriver for Chrome](https://chromedriver.chromium.org/downloads) page.
-        *   The image below shows an example from the CfT page:
-            ![Download Chromedriver specific version from Chrome for Testing page](./media/chromedriver_readme.png)
-    3.  **Install ChromeDriver:**
-        *   Ensure the downloaded `chromedriver` (or `chromedriver.exe` on Windows) is placed in a directory listed in your system's PATH environment variable (e.g., `/usr/local/bin` on Linux/macOS, or a custom scripts folder added to PATH on Windows).
-        *   Alternatively, place it in the root directory of the `agenticSeek` project.
-        *   Make sure the driver is executable (e.g., `chmod +x chromedriver` on Linux/macOS).
-    4.  Refer to the [ChromeDriver Installation](#chromedriver-installation) section in the main Installation guide for more details.
+### Root Cause
+ChromeDriver version incompatibility occurs when:
+1. Your installed ChromeDriver version doesn't match your Chrome browser version
+2. In Docker environments, `undetected_chromedriver` may download its own ChromeDriver version, bypassing the mounted binary
 
-If this section is incomplete or you encounter other ChromeDriver issues, please consider searching existing [GitHub Issues](https://github.com/Fosowl/agenticSeek/issues) or raising a new one.
+### Solution Steps
+
+#### 1. Check Your Chrome Version
+Open Google Chrome → `Settings > About Chrome` to find your version (e.g., "Version 134.0.6998.88")
+
+#### 2. Download Matching ChromeDriver
+
+**For Chrome 115 and newer:** Use the [Chrome for Testing API](https://googlechromelabs.github.io/chrome-for-testing/)
+- Visit the Chrome for Testing availability dashboard
+- Find your Chrome version or the closest available match
+- Download the ChromeDriver for your OS (Linux64 for Docker environments)
+
+**For older Chrome versions:** Use the [legacy ChromeDriver downloads](https://chromedriver.chromium.org/downloads)
+
+![Download ChromeDriver from Chrome for Testing](./media/chromedriver_readme.png)
+
+#### 3. Install ChromeDriver (Choose One Method)
+
+**Method A: Project Root Directory (Recommended for Docker)**
+```bash
+# Place the downloaded chromedriver binary in your project root
+cp path/to/downloaded/chromedriver ./chromedriver
+chmod +x ./chromedriver  # Make executable on Linux/macOS
+```
+
+**Method B: System PATH**
+```bash
+# Linux/macOS
+sudo mv chromedriver /usr/local/bin/
+sudo chmod +x /usr/local/bin/chromedriver
+
+# Windows: Place chromedriver.exe in a folder that's in your PATH
+```
+
+#### 4. Verify Installation
+```bash
+# Test the ChromeDriver version
+./chromedriver --version
+# OR if in PATH:
+chromedriver --version
+```
+
+### Docker-Specific Notes
+
+⚠️ **Important for Docker Users:**
+- The Docker volume mount approach may not work with stealth mode (`undetected_chromedriver`)
+- **Solution**: Place ChromeDriver in the project root directory as `./chromedriver`
+- The application will automatically detect and use this binary
+- You should see: `"Using ChromeDriver from project root: ./chromedriver"` in the logs
+
+### Troubleshooting Tips
+
+1. **Still getting version mismatch?**
+   - Verify the ChromeDriver is executable: `ls -la ./chromedriver`
+   - Check the ChromeDriver version: `./chromedriver --version`
+   - Ensure it matches your Chrome browser version
+
+2. **Docker container issues?**
+   - Check backend logs: `docker logs backend`
+   - Look for the message: `"Using ChromeDriver from project root"`
+   - If not found, verify the file exists and is executable
+
+3. **Chrome for Testing versions**
+   - Use the exact version match when possible
+   - For version 134.0.6998.88, use ChromeDriver 134.0.6998.165 (closest available)
+   - Major version numbers must match (134 = 134)
+
+### Version Compatibility Matrix
+
+| Chrome Version | ChromeDriver Version | Status |
+|----------------|---------------------|---------|
+| 134.0.6998.x   | 134.0.6998.165     | ✅ Works |
+| 133.0.6943.x   | 133.0.6943.141     | ✅ Works |
+| 132.0.6834.x   | 132.0.6834.159     | ✅ Works |
+
+*For the latest compatibility, check the [Chrome for Testing dashboard](https://googlechromelabs.github.io/chrome-for-testing/)*
 
 `Exception: Failed to initialize browser: Message: session not created: This version of ChromeDriver only supports Chrome version 113
 Current browser version is 134.0.6998.89 with binary path`
@@ -544,6 +632,14 @@ raise ValueError("SearxNG base URL must be provided either as an argument or via
 ValueError: SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable.`
 ```
 
+This might arise if you are running the CLI mode with the wrong base url for searxng.
+
+The SEARXNG_BASE_URL should be depending on whenever you run in docker or on host:
+
+**Run on host**: `SEARXNG_BASE_URL="http://localhost:8080"`
+
+**Run fully in docker (web interface)**: `SEARXNG_BASE_URL="http://searxng:8080"`
+
 ## FAQ
 
 **Q: What hardware do I need?**  
@@ -579,7 +675,18 @@ We’re looking for developers to improve AgenticSeek! Check out open issues or 
 
 [Contribution guide](./docs/CONTRIBUTING.md)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+
+## Sponsors:
+
+Want to level up AgenticSeek capabilities with features like flight search, trip planning, or snagging the best shopping deals? Consider crafting a custom tool with SerpApi to unlock more Jarvis-like capabilities. With SerpApi, you can turbocharge your agent for specialized tasks while staying in full control.
+
+<a href="https://serpapi.com/"><img src="./media/banners/sponsor_banner_serpapi.png" height="350" alt="SerpApi Banner" ></a>
+
+See [Contributing.md](./docs/CONTRIBUTING.md) to learn how to integrate custom tools!
+
+### **Patron sponsor**:
+
+- [tatra-labs](https://github.com/tatra-labs)
 
 ## Maintainers:
 
@@ -587,14 +694,8 @@ We’re looking for developers to improve AgenticSeek! Check out open issues or 
 
  > [antoineVIVIES](https://github.com/antoineVIVIES) | Taipei Time 
 
- > [steveh8758](https://github.com/steveh8758) | Taipei Time 
-
 ## Special Thanks:
 
  > [tcsenpai](https://github.com/tcsenpai) and [plitc](https://github.com/plitc) For helping with backend dockerization
 
-## Sponsors:
-
-5$ or more Monthly sponsor appear here:
-- **tatra-labs**
-
+[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)

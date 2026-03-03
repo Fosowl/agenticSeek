@@ -31,6 +31,7 @@ services:
       - SEARXNG_BASE_URL=http://localhost:8080/
       - UWSGI_WORKERS=1
       - UWSGI_THREADS=1
+    user: "1000:1000"  # Run as current user to avoid permission issues
     cap_add:
       - CHOWN
       - SETGID

@@ -92,11 +92,13 @@ Here are some tasks and areas where we need contributions:
 
 Tools are extensions that enable agents to perform specific actions, such as running Python code, making API calls, or conducting web searches. All tools inherit from the Tools base class, which provides methods for parsing and executing tool instructions.
 
-## Tools parsing
+## Understand Tools parsing
 
-Agents invoke tools using a standardized format called a block. A block consists of the tool name followed by the content (e.g., code, query, or parameters) to execute. The format looks like this:
+Agents invoke tools using a standardized format called a block. A block consists of the tool name followed by the content (e.g., code, query, or parameters) to execute. When creating a prompt for an Agent, you must explicitly tell them to use this format.
 
-BECAUSE WE USE MARKDOWN QUOTE FORMAT, READING WILL BE BROKEN ON GITHUB PLEASE START READING THE FILE AS RAW: https://raw.githubusercontent.com/Fosowl/agenticSeek/refs/heads/main/CONTRIBUTING.md
+The format looks like this:
+
+BECAUSE WE USE MARKDOWN QUOTE FORMAT, READING WILL BE BROKEN ON GITHUB PLEASE START READING THE FILE AS RAW:  https://raw.githubusercontent.com/Fosowl/agenticSeek/refs/heads/dev/docs/CONTRIBUTING.md
 
 
 ```<tool name>
@@ -117,10 +119,9 @@ How to handle multiple arguments then ?
 
 Good question! Each tool is free to handle argument in it's own way within the block, but we provide a common parsing logic:
 
-```flight_search
+```trip_search
 from=Paris
-to=Taipei
-date=30/04/2026
+to=Toulouse
 ```
 
 To extract these parameters, use the `get_parameter_value` method provided by the Tools class. Each tool can define its own parameter-handling logic, but the Tools class ensures consistent parsing.
@@ -135,7 +136,7 @@ print("Hello world")
 
 Will save the code in toto.py file within the work_folder defined in the config.ini
 
-## Execution
+## Tools Implementation
 
 When developing a tool, you must implement three abstract methods defined in the Tools class to handle execution, failure detection, and feedback to the agent. These methods ensure consistent behavior across tools and enable robust interaction with the LLM.
 
@@ -171,8 +172,38 @@ Recap:
 - get_parameter_value: Retrieves parameter values from a block's content.
 - File handling: Supports saving block content to files when a :path is specified.
 
-# Implementing and using Agents
+## Prompting an Agent for Tools usage
 
+Consider an example where you want to add a flight search tool to the casual agent, you will need to modify the prompt file for the CasualAgent (e.g., casual_agent.txt) to instruct the LLM to use the a simple flight_search tool. you could add to the prompt:
+
+You can search for flights using the flight_search tool. Example:
+```flight_search
+RY7481
+```
+You simply need to enter the flight number, you will then various informations about the flight if it exist, such as : Airline, Status, Departure time, Arrival Time
+
+## Add the tool to your agent
+
+To add a tool to an agent you simply need to:
+1. Import a tool.
+2. Add the tool class to the **tools** dictionnary.
+3. Update the agent prompt.
+
+```python
+from sources.tools.flightSearch import FlightSearch
+
+class CasualAgent(Agent):
+    def __init__(self, name, prompt_path, provider, verbose=False):
+        super().__init__(name, prompt_path, provider, verbose, None)
+        self.tools = {
+            "flight_search": FlightSearch(),
+        }
+        self.role = "en"
+        self.type = "casual_agent"
+```
+
+
+# Implementing and using Agents
 
 Agents are classes that define how an LLM interacts with users and processes inputs. They can use tools (e.g., for executing code or querying APIs) and maintain a memory of the conversation to provide context-aware responses. All agents inherit from the base Agent class, which provides core functionality like memory management and LLM communication.
 
