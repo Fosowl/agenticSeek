@@ -1,6 +1,6 @@
 
-from typing import Tuple, Callable
-from pydantic import BaseModel
+from typing import Tuple, Callable, List
+from pydantic import BaseModel, Field
 from sources.utility import pretty_print
 
 class QueryRequest(BaseModel):
@@ -40,6 +40,32 @@ class QueryResponse(BaseModel):
             "status": self.status,
             "uid": self.uid
         }
+
+
+class CommunityCommentCreate(BaseModel):
+    content: str
+    author: str = "Anonymous"
+
+
+class CommunityComment(BaseModel):
+    id: str
+    content: str
+    author: str
+    created_at: float
+
+
+class CommunityPostCreate(BaseModel):
+    content: str
+    author: str = "Anonymous"
+
+
+class CommunityPost(BaseModel):
+    id: str
+    content: str
+    author: str
+    likes: int = 0
+    comments: List[CommunityComment] = Field(default_factory=list)
+    created_at: float
 
 class executorResult:
     """

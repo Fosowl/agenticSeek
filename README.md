@@ -258,6 +258,26 @@ Next step: [Start services and run AgenticSeek](#Start-services-and-Run)
 
 By default AgenticSeek is run fully in docker.
 
+## Lightweight Community Preview (likes/comments)
+
+If you only want to preview the community feature (posts, likes, comments) without the full AI stack:
+
+```sh
+cd agenticSeek
+./scripts/run-community-preview.sh
+```
+
+This starts:
+
+- Backend API on `http://localhost:7777`
+- Frontend on `http://localhost:4310`
+
+Stop it with:
+
+```sh
+./scripts/stop-community-preview.sh
+```
+
 **Option 1:** Run in Docker, use web interface:
 
 Start required services. This will start all services from the docker-compose.yml, including:

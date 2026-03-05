@@ -19,7 +19,20 @@ function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [newPostContent, setNewPostContent] = useState("");
+  const [newPostAuthor, setNewPostAuthor] = useState("");
+  const [commentInputs, setCommentInputs] = useState({});
   const messagesEndRef = useRef(null);
+
+  const fetchCommunityPosts = useCallback(async () => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}/community/posts`);
+      setCommunityPosts(res.data || []);
+    } catch (err) {
+      console.error("Error fetching community posts:", err);
+    }
+  }, []);
 
   const fetchLatestAnswer = useCallback(async () => {
     try {
@@ -61,9 +74,10 @@ function App() {
       checkHealth();
       fetchLatestAnswer();
       fetchScreenshot();
+      fetchCommunityPosts();
     }, 3000);
     return () => clearInterval(intervalId);
-  }, [fetchLatestAnswer]);
+  }, [fetchCommunityPosts, fetchLatestAnswer]);
 
   const checkHealth = async () => {
     try {
@@ -198,6 +212,73 @@ function App() {
     } catch (err) {
       setError("Browser not in use");
     }
+  };
+
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    const content = newPostContent.trim();
+    if (!content) {
+      return;
+    }
+
+    try {
+      await axios.post(`${BACKEND_URL}/community/posts`, {
+        content,
+        author: newPostAuthor.trim() || "Anonymous",
+      });
+      setNewPostContent("");
+      setNewPostAuthor("");
+      await fetchCommunityPosts();
+    } catch (err) {
+      console.error("Error creating post:", err);
+      setError("Failed to create post.");
+    }
+  };
+
+  const handleLikePost = async (postId) => {
+    try {
+      await axios.post(`${BACKEND_URL}/community/posts/${postId}/like`);
+      await fetchCommunityPosts();
+    } catch (err) {
+      console.error("Error liking post:", err);
+      setError("Failed to like post.");
+    }
+  };
+
+  const handleAddComment = async (postId) => {
+    const commentDraft = commentInputs[postId] || { content: "", author: "" };
+    const content = commentDraft.content.trim();
+
+    if (!content) {
+      return;
+    }
+
+    try {
+      await axios.post(`${BACKEND_URL}/community/posts/${postId}/comments`, {
+        content,
+        author: commentDraft.author?.trim() || "Anonymous",
+      });
+
+      setCommentInputs((prev) => ({
+        ...prev,
+        [postId]: { content: "", author: prev[postId]?.author || "" },
+      }));
+      await fetchCommunityPosts();
+    } catch (err) {
+      console.error("Error adding comment:", err);
+      setError("Failed to add comment.");
+    }
+  };
+
+  const updateCommentInput = (postId, field, value) => {
+    setCommentInputs((prev) => ({
+      ...prev,
+      [postId]: {
+        content: prev[postId]?.content || "",
+        author: prev[postId]?.author || "",
+        [field]: value,
+      },
+    }));
   };
 
   return (
@@ -343,6 +424,91 @@ function App() {
                 </button>
               </div>
             </form>
+
+            <div className="community-section">
+              <h3>Community Posts</h3>
+              <form onSubmit={handleCreatePost} className="community-form">
+                <input
+                  type="text"
+                  placeholder="Your name (optional)"
+                  value={newPostAuthor}
+                  onChange={(e) => setNewPostAuthor(e.target.value)}
+                />
+                <textarea
+                  placeholder="Share an update with the community..."
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  rows={3}
+                />
+                <button type="submit" className="community-post-button">
+                  Post
+                </button>
+              </form>
+
+              <div className="community-posts-list">
+                {communityPosts.length === 0 ? (
+                  <p className="placeholder">No community posts yet.</p>
+                ) : (
+                  communityPosts.map((post) => (
+                    <div key={post.id} className="community-post-card">
+                      <div className="community-post-meta">
+                        <span className="community-author">{post.author}</span>
+                        <span className="community-date">
+                          {new Date(post.created_at * 1000).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="community-content">{post.content}</p>
+                      <div className="community-actions">
+                        <button
+                          type="button"
+                          className="community-like-button"
+                          onClick={() => handleLikePost(post.id)}
+                        >
+                          Like ({post.likes})
+                        </button>
+                      </div>
+
+                      <div className="community-comments">
+                        {(post.comments || []).map((comment) => (
+                          <div key={comment.id} className="community-comment-item">
+                            <span className="community-comment-author">
+                              {comment.author}:
+                            </span>{" "}
+                            <span>{comment.content}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="community-comment-form">
+                        <input
+                          type="text"
+                          placeholder="Name (optional)"
+                          value={commentInputs[post.id]?.author || ""}
+                          onChange={(e) =>
+                            updateCommentInput(post.id, "author", e.target.value)
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Add a comment"
+                          value={commentInputs[post.id]?.content || ""}
+                          onChange={(e) =>
+                            updateCommentInput(post.id, "content", e.target.value)
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="community-comment-button"
+                          onClick={() => handleAddComment(post.id)}
+                        >
+                          Comment
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="computer-section">
