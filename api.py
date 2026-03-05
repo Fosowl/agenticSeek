@@ -7,7 +7,7 @@ import configparser
 import asyncio
 import time
 from typing import List
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +20,14 @@ from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, Bro
 from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
-from sources.schemas import QueryRequest, QueryResponse
+from sources.schemas import (
+    QueryRequest,
+    QueryResponse,
+    CommunityPost,
+    CommunityPostCreate,
+    CommunityComment,
+    CommunityCommentCreate,
+)
 
 from dotenv import load_dotenv
 
@@ -143,6 +150,16 @@ def initialize_system():
 interaction = initialize_system()
 is_generating = False
 query_resp_history = []
+community_posts: list[CommunityPost] = [
+    CommunityPost(
+        id=str(uuid.uuid4()),
+        content="Welcome to AgenticSeek community. Share workflows and wins.",
+        author="AgenticSeek",
+        likes=0,
+        comments=[],
+        created_at=time.time(),
+    )
+]
 
 @api.get("/screenshot")
 async def get_screenshot():
@@ -165,6 +182,63 @@ async def health_check():
 async def is_active():
     logger.info("Is active endpoint called")
     return {"is_active": interaction.is_active}
+
+
+@api.get("/community/posts")
+async def get_community_posts():
+    ordered_posts = sorted(community_posts, key=lambda p: p.created_at, reverse=True)
+    return [post.model_dump() for post in ordered_posts]
+
+
+@api.post("/community/posts")
+async def create_community_post(request: CommunityPostCreate):
+    content = request.content.strip()
+    author = request.author.strip() or "Anonymous"
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Post content cannot be empty")
+
+    post = CommunityPost(
+        id=str(uuid.uuid4()),
+        content=content,
+        author=author,
+        likes=0,
+        comments=[],
+        created_at=time.time(),
+    )
+    community_posts.append(post)
+    return post.model_dump()
+
+
+@api.post("/community/posts/{post_id}/like")
+async def like_community_post(post_id: str):
+    for post in community_posts:
+        if post.id == post_id:
+            post.likes += 1
+            return {"post_id": post_id, "likes": post.likes}
+    raise HTTPException(status_code=404, detail="Post not found")
+
+
+@api.post("/community/posts/{post_id}/comments")
+async def add_community_comment(post_id: str, request: CommunityCommentCreate):
+    content = request.content.strip()
+    author = request.author.strip() or "Anonymous"
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+
+    for post in community_posts:
+        if post.id == post_id:
+            comment = CommunityComment(
+                id=str(uuid.uuid4()),
+                content=content,
+                author=author,
+                created_at=time.time(),
+            )
+            post.comments.append(comment)
+            return comment.model_dump()
+
+    raise HTTPException(status_code=404, detail="Post not found")
 
 @api.get("/stop")
 async def stop():
