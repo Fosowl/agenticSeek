@@ -1,4 +1,5 @@
 .venv-community/
+.community-preview/
 *.wav
 *.DS_Store
 *.log
