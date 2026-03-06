@@ -32,12 +32,13 @@ class Provider:
             "together": self.together_fn,
             "dsk_deepseek": self.dsk_deepseek,
             "openrouter": self.openrouter_fn,
+            "minimax": self.minimax_fn,
             "test": self.test_fn
         }
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "minimax"]
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
@@ -411,6 +412,37 @@ class Provider:
             return thought
         except Exception as e:
             raise Exception(f"OpenRouter API error: {str(e)}") from e
+
+    def minimax_fn(self, history, verbose=False):
+        """
+        Use MiniMax API to generate text via OpenAI-compatible interface.
+        
+        Supported models:
+        - MiniMax-M2.5: Peak performance model (~60 tps), 204,800 context window
+        - MiniMax-M2.5-highspeed: Same performance, faster (~100 tps)
+        
+        Note: temperature must be in range (0.0, 1.0], default is 1.0
+        """
+        load_dotenv()
+        base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
+        
+        client = OpenAI(api_key=self.api_key, base_url=base_url)
+        if self.is_local:
+            raise Exception("MiniMax is not available for local use. Change config.ini")
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=history,
+                temperature=1.0,
+            )
+            if response is None:
+                raise Exception("MiniMax response is empty.")
+            thought = response.choices[0].message.content
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"MiniMax API error: {str(e)}") from e
 
     def dsk_deepseek(self, history, verbose=False):
         """
