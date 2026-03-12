@@ -69,6 +69,7 @@ OPENROUTER_API_KEY='optional'
 TOGETHER_API_KEY='optional'
 GOOGLE_API_KEY='optional'
 ANTHROPIC_API_KEY='optional'
+MINIMAX_API_KEY='optional'
 ```
 
 
@@ -223,8 +224,8 @@ Refer to the [List of API Providers](#list-of-api-providers) below. Visit their 
 ```ini
 [MAIN]
 is_local = False
-provider_name = openai # Or google, deepseek, togetherAI, huggingface
-provider_model = gpt-3.5-turbo # Or gemini-1.5-flash, deepseek-chat, mistralai/Mixtral-8x7B-Instruct-v0.1 etc.
+provider_name = openai # Or google, deepseek, togetherAI, huggingface, minimax
+provider_model = gpt-3.5-turbo # Or gemini-1.5-flash, deepseek-chat, MiniMax-M2.5, mistralai/Mixtral-8x7B-Instruct-v0.1 etc.
 provider_server_address = # Typically ignored or can be left blank when is_local = False for most APIs
 # ... other settings ...
 ```
@@ -240,6 +241,7 @@ provider_server_address = # Typically ignored or can be left blank when is_local
 | Hugging Face | `huggingface`   | No     | Use models from Hugging Face Inference API.       | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | TogetherAI   | `togetherAI`    | No     | Use various open-source models via TogetherAI API.| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
 | OpenRouter   | `openrouter`    | No     | Use OpenRouter Models| [https://openrouter.ai/](https://openrouter.ai/) |
+| MiniMax      | `minimax`       | No     | Use MiniMax models (MiniMax-M2.5) via MiniMax API. | [platform.minimax.io](https://platform.minimax.io) |
 
 *Note:*
 *   We advise against using `gpt-4o` or other OpenAI models for complex web browsing and task planning as current prompt optimizations are geared towards models like Deepseek.
@@ -462,7 +464,7 @@ stealth_mode = False
     *   `is_local`: `True` if using a local LLM provider (Ollama, LM-Studio, local OpenAI-compatible server) or the self-hosted server option. `False` if using a cloud-based API (OpenAI, Google, etc.).
     *   `provider_name`: Specifies the LLM provider.
         *   Local options: `ollama`, `lm-studio`, `openai` (for local OpenAI-compatible servers), `server` (for the self-hosted server setup).
-        *   API options: `openai`, `google`, `deepseek`, `huggingface`, `togetherAI`.
+        *   API options: `openai`, `google`, `deepseek`, `huggingface`, `togetherAI`, `minimax`.
     *   `provider_model`: The specific model name or ID for the chosen provider (e.g., `deepseekcoder:6.7b` for Ollama, `gpt-3.5-turbo` for OpenAI API, `mistralai/Mixtral-8x7B-Instruct-v0.1` for TogetherAI).
     *   `provider_server_address`: The address of your LLM provider.
         *   For local providers: e.g., `http://127.0.0.1:11434` for Ollama, `http://127.0.0.1:1234` for LM-Studio.
@@ -501,6 +503,7 @@ This section summarizes the supported LLM provider types. Configure them in `con
 | `deepseek`                    | `False`    | Use Deepseek's official API.                     | [Setup to run with an API](#setup-to-run-with-an-api) |
 | `huggingface`                 | `False`    | Use Hugging Face Inference API.                  | [Setup to run with an API](#setup-to-run-with-an-api) |
 | `togetherAI`                  | `False`    | Use TogetherAI's API for various open models.    | [Setup to run with an API](#setup-to-run-with-an-api) |
+| `minimax`                     | `False`    | Use MiniMax models (MiniMax-M2.5) via API.       | [Setup to run with an API](#setup-to-run-with-an-api) |
 
 ---
 ## Troubleshooting
