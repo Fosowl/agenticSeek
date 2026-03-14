@@ -20,7 +20,7 @@ max_size_bytes=$((2 * 1024 * 1024 * 1024 * 10))
 
 echo "Mounting $WORK_DIR ($dir_size_bytes bytes) to docker."
 
-if [ "$dir_size_bytes" -gt "$max_size_bytes" ]; then
+if [ -n "$dir_size_bytes" ] && [ "$dir_size_bytes" -gt "$max_size_bytes" ]; then
     echo "Error: WORK_DIR ($WORK_DIR) contains more than 20GB of data ($(du -sh "$WORK_DIR" 2>/dev/null | awk '{print $1}'))."
     exit 1
 fi
