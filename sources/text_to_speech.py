@@ -11,7 +11,8 @@ try:
     from IPython.display import display, Audio
     import soundfile as sf
 except ImportError:
-    print("Speech synthesis disabled. Please install the kokoro package.")
+    print("Speech synthesis disabled. To enable TTS, install: pip install kokoro==0.9.4 soundfile ipython")
+    print("Note: kokoro requires Python <3.12 due to num2words dependency.")
     IMPORT_FOUND = False
 
 if __name__ == "__main__":
