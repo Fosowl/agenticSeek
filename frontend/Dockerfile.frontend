@@ -2,15 +2,18 @@ FROM node:18
 
 WORKDIR /app
 
-# Install dependencies
+# Copy package files
 COPY agentic-seek-front/package.json agentic-seek-front/package-lock.json ./
-RUN npm install
+
+# Install dependencies with explicit bin linking
+RUN npm ci && npm rebuild
 
 # Copy application code
 COPY agentic-seek-front/ .
 
-# Expose port
+# Verify react-scripts is available (catches install issues early)
+RUN test -f node_modules/.bin/react-scripts || npm install react-scripts
+
 EXPOSE 3000
 
-# Run the application
 CMD ["npm", "start"]
