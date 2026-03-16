@@ -1,0 +1,84 @@
+#!/usr/bin/python
+# Copyright 2016 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+import os
+import sys
+
+def get_config():
+    """Requests the current runtime configuration.
+
+    Returns:
+        A dictionary containing the current runtime configuration.
+
+    Raises:
+        IOError: An error occurred writing to the controller.
+    """
+    json.dump({'type': 'get_config'}, sys.stdout)
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+
+    return json.loads(sys.stdin.readline())
+
+def send_file(filename, data):
+    """Sends file data to be saved by the controller.
+
+    send_file currently only supports sending ASCII-encoded data. For binary
+    data it must be Base64 encoded and additional "encoding" parameter must be
+    sent indicating the data has been encoded.
+
+    Args:
+        filename: (str) Target filename.
+        data: (str) File contents.
+
+    Raises:
+        IOError: An error occurred writing to the controller.
+    """
+    json.dump({
+        'type': 'gen_file',
+        'filename': filename,
+        'contents': data}, sys.stdout)
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+
+def main(args):
+    config = get_config()
+    params = config['params']
+    if not params['custom'] and not params['deploy']:
+        return 0
+
+    # Locate template directory.
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates')
+
+    # Generate Dockerfile
+    entrypoint = config['runtime_data']['entrypoint']
+    template_name = 'Dockerfile.entrypoint.template' if entrypoint else 'Dockerfile.template'
+    path = os.path.join(template_dir, template_name)
+    with open(path, 'r') as f:
+        data = f.read()
+        document_root = config['runtime_data']['document_root']
+
+        send_file('Dockerfile', data.format(document_root=document_root,
+            entrypoint=entrypoint))
+
+    # Generate .dockerignore
+    path = os.path.join(template_dir, 'dockerignore.template')
+    with open(path, 'r') as f:
+        send_file('.dockerignore', f.read())
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

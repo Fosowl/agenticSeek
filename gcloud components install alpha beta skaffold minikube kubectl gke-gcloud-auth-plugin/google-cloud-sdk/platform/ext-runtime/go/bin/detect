@@ -1,0 +1,103 @@
+#!/usr/bin/python
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Fingerprinting code for the Go runtime."""
+
+import fnmatch
+import os
+import re
+import sys
+
+# TODO(b/28231839): Import a vendored gae_ext_runtime library until we have a
+# better solution.
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))), 'lib'))
+
+from gae_ext_runtime import comm
+
+def find_go_files(path):
+    """Return list of '*.go' files in directory 'path', listed non-recursively.
+
+    Args:
+        path: (str) Application path.
+
+    Returns:
+        ([str, ...]) List of full pathnames for all '*.go' files under 'path'
+        dir.
+    """
+    go_files = []
+    root, _, filenames = next(os.walk(path))
+    for filename in fnmatch.filter(filenames, '*.go'):
+        go_files.append(os.path.join(root, filename))
+    return go_files
+
+
+def has_main(filename):
+  """Check filename for 'package main' and 'func main'.
+
+  Args:
+    filename: (str) File name to check.
+
+  Returns:
+    (bool) True if main is found in filename.
+  """
+  with open(filename) as f:
+      found_package = False
+      found_func = False
+      for line in f:
+          if re.match('^package main', line):
+              found_package = True
+          elif re.match('^func main', line):
+              found_func = True
+          if found_package and found_func:
+              return True
+  return False
+
+
+def main(args):
+    if len(args) != 2:
+        # If we're being called incorrectly, this probably isn't happening
+        # from a framework.
+        sys.stderr.write('Invalid Usage: %s <source-root-directory>' %
+                         sys.argv[0])
+        return 1
+    path = args[1]
+
+    comm.info('Checking for Go.')
+
+    # Test #1 - are there any '*.go' files at 'path'?
+    go_files = find_go_files(path)
+    if not go_files:
+        return 1
+
+    # Test #2 - check that one of these files has "package main" and "func main".
+    main_found = False
+    for f in go_files:
+        if has_main(f):
+            comm.info('Found Go main in %s', f)
+            main_found = True
+            break
+    if not main_found:
+        return 1
+
+    # Send the app.yaml contents.
+    runtime = 'custom' if comm.get_config().params.custom else 'go'
+    comm.send_runtime_params(None, {'runtime': 'go'})
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

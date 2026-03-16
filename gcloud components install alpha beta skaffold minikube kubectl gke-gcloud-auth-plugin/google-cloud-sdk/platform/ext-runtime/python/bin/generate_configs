@@ -1,0 +1,60 @@
+#!/usr/bin/python
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import StringIO
+import sys
+
+# Augment the path with our library directory.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(ROOT_DIR, 'lib'))
+
+import comm
+import versions
+
+ROOT = comm.RuntimeDefinitionRoot(ROOT_DIR)
+
+def Main(args):
+  """Generate all config files for the module."""
+
+  # Get runtime parameters from the controller.
+  config = comm.get_config()
+  params = config.params
+  runtime_data = config.runtime_data
+
+  # Customize the dockerfile.
+  if params.custom or params.deploy:
+    # Generate the Dockerfile.
+    out = StringIO.StringIO()
+    out.write(ROOT.read_file('data', 'Dockerfile.preamble'))
+    docker_python_version = versions.PYTHON_INTERPRETER_VERSION_MAP[
+        runtime_data.python_version]
+    out.write(ROOT.read_file('data', 'Dockerfile.virtualenv.template').format(
+              python_version=docker_python_version))
+
+    if runtime_data.got_requirements_txt:
+      out.write(ROOT.read_file('data', 'Dockerfile.requirements_txt'))
+
+    out.write(ROOT.read_file('data', 'Dockerfile.install_app'))
+    if runtime_data.entrypoint:
+      out.write('CMD {0}\n'.format(runtime_data.entrypoint))
+
+    comm.gen_file('Dockerfile', out.getvalue())
+
+    # Generate .dockerignore
+    comm.gen_file('.dockerignore', ROOT.read_file('data', 'dockerignore'))
+
+if __name__ == '__main__':
+  Main(sys.argv)

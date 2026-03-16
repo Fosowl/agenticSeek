@@ -1,0 +1,141 @@
+#!/usr/bin/python
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Java config generation plugin."""
+
+import os
+import StringIO
+import sys
+
+# Augment the path with our library directory.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(ROOT_DIR, 'lib'))
+
+import comm
+import constants
+
+ROOT = comm.RuntimeDefinitionRoot(ROOT_DIR)
+
+
+def is_flex(env):
+    return env in ['2', 'flex', 'flexible']
+
+
+class JavaConfigurator(object):
+    """Generates configuration for a Java application.
+
+      What is supported is:
+        - jar file (run with Open JDK8 image)
+        - war file (run with Jetty9 image)
+        - Exploded war directory (with WEB-INF/):
+          - if env: 2, we use the latest Jetty9 compat runtime image
+          - if not, we use the current Jetty9 compat image we build.
+        This will ease the transition to the new Jetty9 compat runtime for
+        people migrating to env: 2. Once all are on env: 2, we will remove
+        entirely the support for the legacy Jetty9 compat runtime.
+    """
+
+    def __init__(self, appinfo, deploy, entrypoint, server,
+                 openjdk, artifact_to_deploy, custom):
+        """Constructor.
+
+        Args:
+            appinfo: (apphosting.api.appinfo.AppInfoExternal or None) The parsed
+            app.yaml file for the module if it exists.
+            deploy: (bool) True if run in deployment mode.
+            entrypoint: (str) Name of the entrypoint to generate.
+            server: (str) Name of the server to use (jetty9 or None for now).
+            openjdk: (str) Name of the jdk to use (openjdk8 or None for now).
+            artifact_to_deploy: (str) Name of the file or directory to deploy.
+            custom: (bool) True if it is a custom runtime.
+        """
+        self.appinfo = appinfo
+        self.deploy = deploy
+        self.custom = custom
+        self.entrypoint = entrypoint
+        self.server = server
+        self.openjdk = openjdk
+        self.artifact_to_deploy = artifact_to_deploy
+
+    def GenerateConfigs(self):
+        """Generates config files for the module, not including app.yaml.
+           For app.yaml generation, see gae-xrt-java/bin/detect.
+        """
+        if self.custom or self.deploy:
+            self._GenerateDockerfile()
+            self._GenerateDockerignore()
+
+    def _GenerateDockerfile(self):
+      """Generates a Dockerfile appropriate to this application.
+
+      Raises:
+          JavaConfigError: if there is an app.yaml configuration error.
+      """
+      # Customize the dockerfile.
+      out = StringIO.StringIO()
+      if self.artifact_to_deploy.endswith('.war'):
+          if self.appinfo and is_flex(self.appinfo.env):
+              out.write(constants.DOCKERFILE_JETTY_PREAMBLE)
+          else:
+              out.write(constants.DOCKERFILE_JETTY9_PREAMBLE)
+          out.write(constants.DOCKERFILE_INSTALL_WAR.format(
+              self.artifact_to_deploy))
+      if self.artifact_to_deploy.endswith('.jar'):
+          if self.server is not None:
+              raise JavaConfigError('Cannot use server %s '
+                                    'for jar deployment.' % self.server)
+          if self.appinfo and is_flex(self.appinfo.env):
+              out.write(constants.DOCKERFILE_JAVA_PREAMBLE)
+          else:
+              out.write(constants.DOCKERFILE_JAVA8_PREAMBLE)
+          out.write(constants.DOCKERFILE_INSTALL_APP.format(
+              self.artifact_to_deploy))
+      if self.artifact_to_deploy == '.':
+          if self.appinfo and is_flex(self.appinfo.env):
+              out.write(constants.DOCKERFILE_COMPAT_PREAMBLE)
+          elif self.openjdk == 'openjdk8':
+              out.write(constants.DOCKERFILE_COMPAT_PREAMBLE)
+          else:
+              out.write(constants.DOCKERFILE_LEGACY_PREAMBLE)
+          out.write(constants.DOCKERFILE_INSTALL_APP.format(
+              self.artifact_to_deploy))
+
+      # Generate the appropriate start command.
+      if self.entrypoint:
+          out.write(constants.DOCKERFILE_CMD % self.entrypoint)
+      elif self.artifact_to_deploy.endswith('.jar'):
+          # for jar execution generate the command to run:
+          out.write(constants.DOCKERFILE_JAVA8_JAR_CMD.format(
+              self.artifact_to_deploy))
+      comm.gen_file('Dockerfile', out.getvalue())
+
+    def _GenerateDockerignore(self):
+      """Generates a .dockerignore file appropriate to this application."""
+      comm.gen_file('.dockerignore', ROOT.read_file('data', 'dockerignore'))
+
+
+def main(args):
+    config = comm.get_config()
+    JavaConfigurator(config.params.appinfo,
+                     config.params.deploy,
+                     config.runtime_data.entrypoint,
+                     config.runtime_data.server,
+                     config.runtime_data.openjdk,
+                     config.runtime_data.artifact_to_deploy,
+                     config.params.custom).GenerateConfigs()
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

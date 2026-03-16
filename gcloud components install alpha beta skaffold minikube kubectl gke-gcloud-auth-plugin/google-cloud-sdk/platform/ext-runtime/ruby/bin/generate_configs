@@ -1,0 +1,56 @@
+#!/usr/bin/python
+# Copyright 2016 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+import os
+import sys
+
+# HACK: Import a vendored gae_ext_runtime library until we have a better
+# solution.
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))), 'lib'))
+
+from gae_ext_runtime import comm
+
+def main(args):
+    config = comm.get_config()
+    params = config.params
+    if not params.custom and not params.deploy:
+        return 0
+
+    entrypoint = config.runtime_data.entrypoint
+    ruby_version = config.runtime_data.ruby_version
+    base_image_tag = os.environ.get('GAE_RUBY_BASE_IMAGE_TAG') or 'latest'
+
+    # Locate template directory.
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates')
+
+    # Generate Dockerfile
+    path = os.path.join(template_dir, 'Dockerfile.template')
+    with open(path, 'r') as f:
+        data = f.read()
+
+        comm.gen_file('Dockerfile', data.format(ruby_version=ruby_version,
+            entrypoint=entrypoint, base_image_tag=base_image_tag))
+
+    # Generate .dockerignore
+    path = os.path.join(template_dir, 'dockerignore.template')
+    with open(path, 'r') as f:
+        comm.gen_file('.dockerignore', f.read())
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

@@ -1,0 +1,90 @@
+#!/usr/bin/python
+# Copyright 2016 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# PHP detection script.
+
+import json
+import os
+import posixpath
+import sys
+
+def get_config():
+    """Requests the current runtime configuration.
+
+    Returns:
+        A dictionary containing the current runtime configuration.
+
+    Raises:
+        IOError: An error occurred writing to the controller.
+    """
+    json.dump({'type': 'get_config'}, sys.stdout)
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+
+    return json.loads(sys.stdin.readline())
+
+def main(args):
+    if len(args) != 2:
+        print 'Invalid Usage: {} <source-root-directory>'.format(args[0])
+        return 1
+
+    config = get_config()
+    params = config['params']
+    appinfo = params['appinfo']
+    entrypoint = None
+    if appinfo and 'entrypoint' in appinfo:
+        entrypoint = appinfo['entrypoint']
+        if isinstance(entrypoint, list):
+          entrypoint = json.dumps(entrypoint)
+
+    root = '.'
+    document_root = '/app'
+    if appinfo and 'runtime_config' in appinfo:
+        if 'document_root' in appinfo['runtime_config']:
+            root = appinfo['runtime_config']['document_root']
+            document_root = posixpath.normpath(posixpath.join('/app', root))
+
+    directory = args[1]
+    for dirpath, _, filenames in os.walk(directory):
+        for filename in filenames:
+            if filename.endswith('.php'):
+                # "appinfo" writes to the app.yaml when it's generated, and
+		# "runtime_data" writes to the Dockerfile
+                json_config = {
+                    'type': 'runtime_parameters',
+                    'appinfo': {
+                        'runtime': 'custom' if params['custom'] else 'php',
+                        'env': 'flex',
+                        'runtime_config': {
+                            'document_root': root,
+                        },
+                    },
+                    'runtime_data': {
+                        'entrypoint': entrypoint,
+                        'document_root': document_root,
+                    },
+                }
+                # Prevent "entrypoint: null" in generated app.yaml
+                #if entrypoint:
+                #    json_config['appinfo']['entrypoint'] = entrypoint
+                json.dump(json_config, sys.stdout)
+                sys.stdout.write('\n')
+                sys.stdout.flush()
+                return 0
+
+    return 1
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
