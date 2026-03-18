@@ -157,6 +157,42 @@ class TestMiniMaxProviderModels(unittest.TestCase):
 
     @patch('sources.llm_provider.OpenAI')
     @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-key'})
+    def test_minimax_m27_model(self, mock_openai_class):
+        """Test MiniMax-M2.7 model."""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="Response"))]
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch.object(Provider, 'get_api_key', return_value='test-key'):
+            provider = Provider("minimax", "MiniMax-M2.7", is_local=False)
+            history = [{"role": "user", "content": "Hello"}]
+            provider.minimax_fn(history)
+
+            call_kwargs = mock_client.chat.completions.create.call_args[1]
+            self.assertEqual(call_kwargs['model'], "MiniMax-M2.7")
+
+    @patch('sources.llm_provider.OpenAI')
+    @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-key'})
+    def test_minimax_m27_highspeed_model(self, mock_openai_class):
+        """Test MiniMax-M2.7-highspeed model."""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="Response"))]
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch.object(Provider, 'get_api_key', return_value='test-key'):
+            provider = Provider("minimax", "MiniMax-M2.7-highspeed", is_local=False)
+            history = [{"role": "user", "content": "Hello"}]
+            provider.minimax_fn(history)
+
+            call_kwargs = mock_client.chat.completions.create.call_args[1]
+            self.assertEqual(call_kwargs['model'], "MiniMax-M2.7-highspeed")
+
+    @patch('sources.llm_provider.OpenAI')
+    @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-key'})
     def test_minimax_m25_model(self, mock_openai_class):
         """Test MiniMax-M2.5 model."""
         mock_client = MagicMock()
