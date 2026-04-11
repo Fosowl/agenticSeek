@@ -1,0 +1,9 @@
+Google Cloud CLI
+Copyright 2013 Google LLC. All Rights Reserved.
+
+The Google Cloud CLI contains tools and libraries that allow you to create and
+manage resources on Google's Cloud Platform, including App Engine, Compute
+Engine, Cloud Storage, Cloud SQL, and BigQuery.
+
+For more information on how to set up and use the Google Cloud CLI, please see:
+  https://cloud.google.com/cli
