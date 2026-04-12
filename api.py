@@ -46,7 +46,8 @@ def is_running_in_docker():
 from celery import Celery
 
 api = FastAPI(title="AgenticSeek API", version="0.1.0")
-celery_app = Celery("tasks", broker="redis://localhost:6379/0", backend="redis://localhost:6379/0")
+_redis_url = os.environ.get("REDIS_URL", os.environ.get("REDIS_BASE_URL", "redis://localhost:6379/0"))
+celery_app = Celery("tasks", broker=_redis_url, backend=_redis_url)
 celery_app.conf.update(task_track_started=True)
 logger = Logger("backend.log")
 config = configparser.ConfigParser()
