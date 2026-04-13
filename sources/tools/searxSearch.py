@@ -104,7 +104,7 @@ class searxSearch(Tools):
                 return "No search results, web search failed."
             return "\n\n".join(results)  # Return results as a single string, separated by newlines
         except requests.exceptions.RequestException as e:
-            raise Exception("\nSearxng search failed. did you run start_services.sh? is docker still running?") from e
+            return f"Error during search: SearxNG unavailable. Did you run start_services.sh? Is Docker still running? ({str(e)})"
 
     def execution_failure_check(self, output: str) -> bool:
         """
