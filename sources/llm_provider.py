@@ -43,7 +43,7 @@ class Provider:
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax", "litellm"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
@@ -513,13 +513,17 @@ class Provider:
         if self.is_local:
             raise Exception("LiteLLM is not available for local use. Change config.ini")
 
+        api_key = os.getenv("LITELLM_API_KEY", None)
+
         try:
-            response = litellm.completion(
-                model=self.model,
-                messages=history,
-                api_key=self.api_key,
-                drop_params=True,
-            )
+            call_kwargs = {
+                "model": self.model,
+                "messages": history,
+                "drop_params": True,
+            }
+            if api_key:
+                call_kwargs["api_key"] = api_key
+            response = litellm.completion(**call_kwargs)
             if response is None:
                 raise Exception("LiteLLM response is empty.")
             thought = response.choices[0].message.content
