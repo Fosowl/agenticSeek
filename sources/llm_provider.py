@@ -37,12 +37,13 @@ class Provider:
             "openrouter": self.openrouter_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
+            "litellm": self.litellm_fn,
             "test": self.test_fn
         }
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax", "litellm"]
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
@@ -496,6 +497,34 @@ class Provider:
         except APIError as e:
             raise APIError(f"API error occurred: {str(e)}") from e
         return None
+
+    def litellm_fn(self, history, verbose=False):
+        """
+        Use LiteLLM AI gateway for completion.
+        Routes to 100+ providers (OpenAI, Anthropic, Azure, Bedrock,
+        Vertex AI, Groq, Together, Ollama, etc.) based on model prefix.
+        See https://docs.litellm.ai/docs/providers
+        """
+        try:
+            import litellm
+        except ImportError as e:
+            raise ImportError("litellm is not installed. Install with: pip install litellm") from e
+
+        try:
+            response = litellm.completion(
+                model=self.model,
+                messages=history,
+                api_key=self.api_key,
+                drop_params=True,
+            )
+            if response is None:
+                raise Exception("LiteLLM response is empty.")
+            thought = response.choices[0].message.content
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"LiteLLM API error: {str(e)}") from e
 
     def test_fn(self, history, verbose=True):
         """
