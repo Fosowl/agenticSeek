@@ -30,6 +30,15 @@ class TestLiteLLMProvider(unittest.TestCase):
             mock_get_key.assert_called_with("litellm")
             self.assertEqual(provider.api_key, 'test-litellm-key')
 
+    def test_litellm_local_not_supported(self):
+        """Test that litellm provider raises error when is_local=True."""
+        provider = Provider("litellm", "gpt-4o-mini", is_local=True)
+        provider.api_key = 'test-key'
+        history = [{"role": "user", "content": "Hello"}]
+        with self.assertRaises(Exception) as context:
+            provider.litellm_fn(history)
+        self.assertIn("not available for local use", str(context.exception))
+
     @patch('litellm.completion')
     def test_litellm_fn_returns_content(self, mock_completion):
         """Test that litellm_fn returns response content."""

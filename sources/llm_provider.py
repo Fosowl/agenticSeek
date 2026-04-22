@@ -510,6 +510,9 @@ class Provider:
         except ImportError as e:
             raise ImportError("litellm is not installed. Install with: pip install litellm") from e
 
+        if self.is_local:
+            raise Exception("LiteLLM is not available for local use. Change config.ini")
+
         try:
             response = litellm.completion(
                 model=self.model,
