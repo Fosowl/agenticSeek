@@ -37,6 +37,7 @@ class Provider:
             "openrouter": self.openrouter_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
+            "litellm": self.litellm_fn,
             "test": self.test_fn
         }
         self.logger = Logger("provider.log")
@@ -496,6 +497,41 @@ class Provider:
         except APIError as e:
             raise APIError(f"API error occurred: {str(e)}") from e
         return None
+
+    def litellm_fn(self, history, verbose=False):
+        """
+        Use LiteLLM AI gateway for completion.
+        Routes to 100+ providers (OpenAI, Anthropic, Azure, Bedrock,
+        Vertex AI, Groq, Together, Ollama, etc.) based on model prefix.
+        See https://docs.litellm.ai/docs/providers
+        """
+        try:
+            import litellm
+        except ImportError as e:
+            raise ImportError("litellm is not installed. Install with: pip install litellm") from e
+
+        if self.is_local:
+            raise Exception("LiteLLM is not available for local use. Change config.ini")
+
+        api_key = os.getenv("LITELLM_API_KEY", None)
+
+        try:
+            call_kwargs = {
+                "model": self.model,
+                "messages": history,
+                "drop_params": True,
+            }
+            if api_key:
+                call_kwargs["api_key"] = api_key
+            response = litellm.completion(**call_kwargs)
+            if response is None:
+                raise Exception("LiteLLM response is empty.")
+            thought = response.choices[0].message.content
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"LiteLLM API error: {str(e)}") from e
 
     def test_fn(self, history, verbose=True):
         """
