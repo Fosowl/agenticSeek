@@ -348,7 +348,7 @@ class Provider:
         Use local lm-studio server to generate text.
         """
         if self.in_docker:
-            # Extract port from server_address, handling both "host:port" and "http://host:port"
+            # Extract scheme, host, and port from server_address
             port = "1234"  # default
             addr = self.server_address
             if "://" not in addr:
@@ -356,7 +356,14 @@ class Provider:
             parsed_addr = urlparse(addr)
             if parsed_addr.port:
                 port = str(parsed_addr.port)
-            url = f"{self.internal_url}:{port}"
+            hostname = parsed_addr.hostname or "localhost"
+            scheme = parsed_addr.scheme or "http"
+            # For localhost/127.0.0.1, redirect to Docker internal URL so containers
+            # can reach the host machine; for all other hosts use the configured address
+            if hostname in ("localhost", "127.0.0.1"):
+                url = f"{self.internal_url}:{port}"
+            else:
+                url = f"{scheme}://{hostname}:{port}"
         else:
             # Normalize the address to ensure it has a scheme prefix
             addr = self.server_ip
