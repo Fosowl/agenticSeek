@@ -40,7 +40,7 @@ class Tools():
         self.logger = Logger("tools.log")
         self.config = configparser.ConfigParser()
         self.work_dir = self.create_work_dir()
-        self.excutable_blocks_found = False
+        self.executable_blocks_found = False
         self.safe_mode = False
         self.allow_language_exec_bash = False
     
@@ -147,8 +147,8 @@ class Tools():
         """
         Check if executable blocks were found.
         """
-        tmp = self.excutable_blocks_found
-        self.excutable_blocks_found = False
+        tmp = self.executable_blocks_found
+        self.executable_blocks_found = False
         return tmp
 
     def load_exec_block(self, llm_text: str):
@@ -197,7 +197,7 @@ class Tools():
             if ':' in content.split('\n')[0]:
                 save_path = content.split('\n')[0].split(':')[1]
                 content = content[content.find('\n')+1:]
-            self.excutable_blocks_found = True
+            self.executable_blocks_found = True
             code_blocks.append(content)
             start_index = end_pos + len(end_tag)
         self.logger.info(f"Found {len(code_blocks)} blocks to execute")
