@@ -59,8 +59,10 @@ class Provider:
         api_key_var = f"{provider.upper()}_API_KEY"
         api_key = os.getenv(api_key_var)
         if not api_key:
-            pretty_print(f"API key {api_key_var} not found in .env file. Please add it", color="warning")
-            exit(1)
+            raise ValueError(
+                f"API key {api_key_var} not found in .env file. "
+                "Please add it to your .env file and restart the server."
+            )
         return api_key
     
     def get_internal_url(self):
