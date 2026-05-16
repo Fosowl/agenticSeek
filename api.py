@@ -21,6 +21,14 @@ from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
+from sources.local_security import (
+    DEFAULT_CORS_ORIGINS,
+    LocalTokenMiddleware,
+    env_local_token,
+    is_loopback_host,
+    parse_cors_origins,
+    resolve_backend_host,
+)
 
 from dotenv import load_dotenv
 
@@ -32,14 +40,14 @@ def is_running_in_docker():
     # Method 1: Check for .dockerenv file
     if os.path.exists('/.dockerenv'):
         return True
-    
+
     # Method 2: Check cgroup
     try:
         with open('/proc/1/cgroup', 'r') as f:
             return 'docker' in f.read()
     except:
         pass
-    
+
     return False
 
 
@@ -52,13 +60,25 @@ logger = Logger("backend.log")
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+# Local lockdown defaults: AgenticSeek is a local laptop client and has no
+# built-in auth. CORS is restricted to the bundled React UI's localhost
+# origins by default; an optional X-Local-Token gate can be enabled via
+# BACKEND_LOCAL_TOKEN. See docs/local_lockdown.md.
+_cors_origins = parse_cors_origins(
+    os.getenv("BACKEND_CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+)
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_local_token = env_local_token()
+if _local_token:
+    api.add_middleware(LocalTokenMiddleware, token=_local_token)
+    logger.info("Local token gate enabled (X-Local-Token required)")
 
 if not os.path.exists(".screenshots"):
     os.makedirs(".screenshots")
@@ -299,4 +319,11 @@ if __name__ == "__main__":
         port = int(envport)
     else:
         port = 7777
-    uvicorn.run(api, host="0.0.0.0", port=port)
+    host = resolve_backend_host(os.getenv("BACKEND_HOST"), is_running_in_docker())
+    if not is_loopback_host(host) and not is_running_in_docker():
+        print(
+            "[AgenticSeek] WARNING: binding API to {host}. AgenticSeek has no "
+            "built-in auth; exposing it beyond localhost is unsupported until "
+            "agenticplug auth is in place. See docs/local_lockdown.md.".format(host=host)
+        )
+    uvicorn.run(api, host=host, port=port)
