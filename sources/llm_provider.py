@@ -37,6 +37,7 @@ class Provider:
             "openrouter": self.openrouter_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
+            "agenticplug": self.agenticplug_fn,
             "test": self.test_fn
         }
         self.logger = Logger("provider.log")
@@ -460,6 +461,62 @@ class Provider:
             return thought
         except Exception as e:
             raise Exception(f"MiniMax API error: {str(e)}") from e
+
+    def agenticplug_fn(self, history, verbose=False):
+        """
+        Use an AgenticPlug (or any OpenAI-compatible) gateway to generate text.
+
+        Configuration is read from environment variables so that secrets are not
+        stored in config.ini:
+
+        - AGENTICPLUG_BASE_URL: full base URL of the gateway (e.g. http://127.0.0.1:8080/v1).
+          If unset, falls back to the provider's server_address from config.ini.
+        - AGENTICPLUG_MODEL: optional model override. If unset, uses provider_model.
+        - AGENTICPLUG_API_KEY: bearer token sent as `Authorization: Bearer <token>`.
+          Dev-only placeholder; production auth is expected to be GitHub App / JWT
+          handled by the agenticplug server.
+        - AGENTICPLUG_ROUTE_HEADER: optional value for `X-AgenticPlug-Route` used
+          by the gateway to route to a specific backend (e.g. "hermes").
+
+        Defaults keep traffic local: when no env is set, the provider talks to
+        the address configured in config.ini, which is 127.0.0.1 by default.
+        """
+        load_dotenv()
+        base_url = os.getenv("AGENTICPLUG_BASE_URL")
+        if not base_url:
+            addr = self.server_address
+            if "://" not in str(addr):
+                addr = f"http://{addr}"
+            base_url = addr.rstrip("/")
+            if not base_url.endswith("/v1"):
+                base_url = f"{base_url}/v1"
+
+        api_key = os.getenv("AGENTICPLUG_API_KEY") or "not-required"
+        model = os.getenv("AGENTICPLUG_MODEL") or self.model
+        route_header = os.getenv("AGENTICPLUG_ROUTE_HEADER")
+
+        default_headers = {}
+        if route_header:
+            default_headers["X-AgenticPlug-Route"] = route_header
+
+        client_kwargs = {"api_key": api_key, "base_url": base_url}
+        if default_headers:
+            client_kwargs["default_headers"] = default_headers
+        client = OpenAI(**client_kwargs)
+
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=history,
+            )
+            if response is None:
+                raise Exception("AgenticPlug response is empty.")
+            thought = response.choices[0].message.content
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"AgenticPlug API error: {str(e)}") from e
 
     def dsk_deepseek(self, history, verbose=False):
         """
