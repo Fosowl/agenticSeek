@@ -62,3 +62,9 @@ the gateway can pick a specific backend. For example, setting it to `hermes`
 routes to the Hermes backend on the AgenticPlug server. The header is only
 sent when the variable is set, so omitting it preserves the gateway's default
 routing.
+
+## See also
+
+- [AgenticPlug GPL-Compatible Integration Boundary](agenticplug_gpl_boundary.md)
+  — documents the licensing boundary between the AgenticSeek fork and the
+  AgenticPlug external service.
