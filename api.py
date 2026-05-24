@@ -187,7 +187,7 @@ async def get_latest_answer():
             "agent_name": interaction.current_agent.agent_name if interaction.current_agent else "None",
             "success": interaction.current_agent.success,
             "blocks": {f'{i}': block.jsonify() for i, block in enumerate(interaction.get_last_blocks_result())} if interaction.current_agent else {},
-            "status": interaction.current_agent.get_status_message if interaction.current_agent else "No status available",
+            "status": interaction.current_agent.get_status_message() if interaction.current_agent else "No status available",
             "uid": uid
         }
         interaction.current_agent.last_answer = ""
