@@ -45,6 +45,7 @@ openai
 sniffio
 ordered_set
 pypinyin
+tavily-python
 
 # Optional: TTS support (requires Python <3.12)
 # pip install kokoro==0.9.4 soundfile ipython

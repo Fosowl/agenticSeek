@@ -1,8 +1,10 @@
 import asyncio
+import configparser
 
 from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
 from sources.tools.searxSearch import searxSearch
+from sources.tools.tavilySearch import tavilySearch
 from sources.tools.flightSearch import FlightSearch
 from sources.tools.fileFinder import FileFinder
 from sources.tools.BashInterpreter import BashInterpreter

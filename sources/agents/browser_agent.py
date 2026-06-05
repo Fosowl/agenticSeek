@@ -1,5 +1,6 @@
 import re
 import time
+import configparser
 from datetime import date
 from typing import List, Tuple, Type, Dict
 from enum import Enum
@@ -8,6 +9,7 @@ import asyncio
 from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
 from sources.tools.searxSearch import searxSearch
+from sources.tools.tavilySearch import tavilySearch
 from sources.browser import Browser
 from sources.logger import Logger
 from sources.memory import Memory
@@ -26,7 +28,7 @@ class BrowserAgent(Agent):
         """
         super().__init__(name, prompt_path, provider, verbose, browser)
         self.tools = {
-            "web_search": searxSearch(),
+            "web_search": self._init_search_tool(),
         }
         self.role = "web"
         self.type = "browser_agent"
@@ -43,6 +45,15 @@ class BrowserAgent(Agent):
                         memory_compression=False,
                         model_provider=provider.get_model_name() if provider else None)
     
+    def _init_search_tool(self):
+        """Select search tool based on config.ini search_provider setting."""
+        config = configparser.ConfigParser()
+        config.read('./config.ini')
+        provider = config.get('MAIN', 'search_provider', fallback='searxng').strip().lower()
+        if provider == 'tavily':
+            return tavilySearch()
+        return searxSearch()
+
     def get_today_date(self) -> str:
         """Get the date"""
         date_time = date.today()
