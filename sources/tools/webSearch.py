@@ -11,6 +11,8 @@ from sources.utility import animate_thinking, pretty_print
 """
 WARNING
 webSearch is fully deprecated and is being replaced by searxSearch for web search.
+For a cloud-hosted alternative that does not require a self-hosted SearxNG instance,
+use tavilySearch (powered by Tavily) instead.
 """
 
 class webSearch(Tools):
