@@ -48,7 +48,9 @@ async def main():
                      provider=provider, verbose=False, browser=browser),
         PlannerAgent(name="Planner",
                      prompt_path=f"prompts/{personality_folder}/planner_agent.txt",
-                     provider=provider, verbose=False, browser=browser),
+                     provider=provider, verbose=False, browser=browser,
+                     personality_folder=personality_folder,
+                     casual_agent_name=config["MAIN"]["agent_name"]),
         #McpAgent(name="MCP Agent",
         #            prompt_path=f"prompts/{personality_folder}/mcp_agent.txt",
         #            provider=provider, verbose=False), # NOTE under development

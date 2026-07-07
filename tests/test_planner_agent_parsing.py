@@ -14,7 +14,7 @@ for mod_name in [
     'pypdf', 'langid', 'pypinyin', 'fake_useragent',
     'chromedriver_autoinstaller', 'num2words', 'sentencepiece', 'sacremoses',
     'scipy', 'numpy', 'selenium_stealth', 'undetected_chromedriver',
-    'markdownify',
+    'markdownify', 'termcolor',
 ]:
     if mod_name not in sys.modules:
         sys.modules[mod_name] = MagicMock()
@@ -32,12 +32,6 @@ class TestPlannerAgentParsing(unittest.TestCase):
         self.agent.tools = {"json": MagicMock()}
         self.agent.tools["json"].tag = "json"
         self.agent.logger = MagicMock()
-        self.agent.agents = {
-            "coder": MagicMock(),
-            "file": MagicMock(),
-            "web": MagicMock(),
-            "casual": MagicMock()
-        }
 
     def test_parse_valid_json(self):
         """Test that valid JSON plan is parsed correctly."""
