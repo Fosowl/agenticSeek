@@ -7,13 +7,14 @@ import configparser
 import asyncio
 import time
 from typing import List
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uuid
 
+from sources.api_auth import require_api_token
 from sources.llm_provider import Provider
 from sources.interaction import Interaction
 from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
@@ -226,7 +227,11 @@ async def think_wrapper(interaction, query):
         interaction.last_success = False
         raise e
 
-@api.post("/query", response_model=QueryResponse)
+@api.post(
+    "/query",
+    response_model=QueryResponse,
+    dependencies=[Depends(require_api_token)],
+)
 async def process_query(request: QueryRequest):
     global is_generating, query_resp_history
     logger.info(f"Processing query: {request.query}")
