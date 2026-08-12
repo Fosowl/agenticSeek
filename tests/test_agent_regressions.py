@@ -110,6 +110,19 @@ class TestAgentAddTool(unittest.TestCase):
             agent.add_tool("bad", 42)
 
 
+class TestGetStatusMessage(unittest.TestCase):
+    """Regression: `/latest_answer` serialises the agent status string (#496)."""
+
+    def test_status_message_accessor_is_callable_method(self):
+        """api.py calls `get_status_message()`, so the accessor must be a
+        callable method returning the status string — not a property, which
+        would raise `'str' object is not callable` at the call site."""
+        agent = make_bare_agent(Agent)
+        agent.status_message = "In progress"
+        self.assertTrue(callable(agent.get_status_message))
+        self.assertEqual(agent.get_status_message(), "In progress")
+
+
 class TestQueryRequestStr(unittest.TestCase):
 
     def test_str_uses_existing_fields_only(self):
