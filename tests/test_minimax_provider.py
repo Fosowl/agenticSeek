@@ -84,6 +84,49 @@ class TestMiniMaxProvider(unittest.TestCase):
                 base_url='https://api.minimaxi.com/v1'
             )
 
+    @patch('sources.llm_provider.requests.post')
+    def test_minimax_anthropic_compatible_base_urls(self, mock_post):
+        """Test the MiniMax Anthropic-compatible endpoints in both regions."""
+        mock_post.return_value.json.return_value = {
+            "content": [
+                {"type": "thinking", "thinking": "Reasoning"},
+                {"type": "text", "text": "Hello!"},
+            ]
+        }
+        history = [
+            {"role": "system", "content": "Be helpful."},
+            {"role": "user", "content": "Hello"},
+        ]
+
+        for base_url in (
+            'https://api.minimax.io/anthropic',
+            'https://api.minimaxi.com/anthropic',
+        ):
+            with self.subTest(base_url=base_url), patch.dict(
+                os.environ, {'MINIMAX_BASE_URL': base_url}
+            ):
+                mock_post.reset_mock()
+                with patch.object(Provider, 'get_api_key', return_value='test-key'):
+                    provider = Provider("minimax", "MiniMax-M3", is_local=False)
+                    result = provider.minimax_fn(history)
+
+                self.assertEqual(result, "Hello!")
+                mock_post.assert_called_once_with(
+                    f'{base_url}/v1/messages',
+                    headers={
+                        'Content-Type': 'application/json',
+                        'X-Api-Key': 'test-key',
+                    },
+                    json={
+                        'model': 'MiniMax-M3',
+                        'max_tokens': 1024,
+                        'messages': [{"role": "user", "content": "Hello"}],
+                        'temperature': 1.0,
+                        'system': 'Be helpful.',
+                    },
+                    timeout=30,
+                )
+
     @patch('sources.llm_provider.OpenAI')
     @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-key'})
     def test_minimax_uses_temperature_one(self, mock_openai_class):
