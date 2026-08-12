@@ -440,7 +440,7 @@ class Provider:
 
     def minimax_fn(self, history, verbose=False):
         """
-        Use MiniMax API to generate text via OpenAI-compatible interface.
+        Use MiniMax API through its OpenAI- or Anthropic-compatible interface.
 
         Supported models:
         - MiniMax-M3: Latest flagship model with enhanced reasoning and coding (default)
@@ -452,18 +452,48 @@ class Provider:
         load_dotenv()
         base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
 
-        client = OpenAI(api_key=self.api_key, base_url=base_url)
         if self.is_local:
             raise Exception("MiniMax is not available for local use. Change config.ini")
         try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-                temperature=1.0,
-            )
+            if base_url.rstrip("/").endswith("/anthropic"):
+                system_message = None
+                messages = []
+                for message in history:
+                    if message["role"] == "system":
+                        system_message = message["content"]
+                    else:
+                        messages.append(message)
+                payload = {
+                    "model": self.model,
+                    "max_tokens": 1024,
+                    "messages": messages,
+                    "temperature": 1.0,
+                }
+                if system_message is not None:
+                    payload["system"] = system_message
+                response = requests.post(
+                    f"{base_url.rstrip('/')}/v1/messages",
+                    headers={"Content-Type": "application/json", "X-Api-Key": self.api_key},
+                    json=payload,
+                    timeout=30,
+                )
+                response.raise_for_status()
+                content = response.json().get("content", [])
+                thought = "".join(
+                    block.get("text", "") for block in content if block.get("type") == "text"
+                )
+            else:
+                client = OpenAI(api_key=self.api_key, base_url=base_url)
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=history,
+                    temperature=1.0,
+                )
+                thought = response.choices[0].message.content if response is not None else None
             if response is None:
                 raise Exception("MiniMax response is empty.")
-            thought = response.choices[0].message.content
+            if not thought:
+                raise Exception("MiniMax response is empty.")
             if verbose:
                 print(thought)
             return thought
