@@ -2,6 +2,7 @@ import unittest
 import asyncio
 import os
 import sys
+import json
 from unittest.mock import MagicMock, AsyncMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add project root to Python path
@@ -113,14 +114,18 @@ class TestAgentAddTool(unittest.TestCase):
 class TestGetStatusMessage(unittest.TestCase):
     """Regression: `/latest_answer` serialises the agent status string (#496)."""
 
-    def test_status_message_accessor_is_callable_method(self):
-        """api.py calls `get_status_message()`, so the accessor must be a
-        callable method returning the status string — not a property, which
-        would raise `'str' object is not callable` at the call site."""
+    def test_status_message_serialises_as_plain_string(self):
+        """api.py reads the agent status as `status_message` for the
+        `/latest_answer` response (the `get_status_message` property returns
+        the same value); it must be a plain str so JSONResponse can serialise
+        it — not a bound method object, which would raise `TypeError` during
+        serialisation."""
         agent = make_bare_agent(Agent)
         agent.status_message = "In progress"
-        self.assertTrue(callable(agent.get_status_message))
-        self.assertEqual(agent.get_status_message(), "In progress")
+        self.assertIsInstance(agent.status_message, str)
+        self.assertEqual(agent.status_message, "In progress")
+        self.assertEqual(agent.get_status_message, "In progress")
+        json.dumps(agent.status_message)  # must not raise
 
 
 class TestQueryRequestStr(unittest.TestCase):
