@@ -785,4 +785,4 @@ See [Contributing.md](./docs/CONTRIBUTING.md) to learn how to integrate custom t
 
  > [tcsenpai](https://github.com/tcsenpai) and [plitc](https://github.com/plitc) For helping with backend dockerization
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Fosowl/agenticSeek&type=Date)](https://star-history.dera.page/#Fosowl/agenticSeek&Date)

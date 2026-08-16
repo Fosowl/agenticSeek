@@ -692,4 +692,4 @@ X 上除了我的個人賬戶（https://x.com/Martin993886460）之外的任何 
 
  > [tcsenpai](https://github.com/tcsenpai) 和 [plitc](https://github.com/plitc) 協助後端 Docker 化
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Fosowl/agenticSeek&type=Date)](https://star-history.dera.page/#Fosowl/agenticSeek&Date)
