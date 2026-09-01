@@ -1,0 +1,18 @@
+<svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .wordmark-text {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        font-size: 42px;
+        font-weight: 500;
+        fill: #1F1F1F;
+        letter-spacing: -0.8px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .wordmark-text { fill: #FAFBF8; }
+      }
+    </style>
+  </defs>
+  <!-- Text-only wordmark -->
+  <text x="150" y="60" text-anchor="middle" class="wordmark-text">Save It Somewhere</text>
+</svg>

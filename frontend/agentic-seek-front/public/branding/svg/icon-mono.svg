@@ -1,0 +1,10 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Monochrome icon (black and white) -->
+  <circle cx="32" cy="32" r="20" fill="#000000"/>
+
+  <!-- Subtle placement guides -->
+  <line x1="32" y1="6" x2="32" y2="14" stroke="#000000" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="32" y1="50" x2="32" y2="58" stroke="#000000" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="6" y1="32" x2="14" y2="32" stroke="#000000" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="50" y1="32" x2="58" y2="32" stroke="#000000" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+</svg>
