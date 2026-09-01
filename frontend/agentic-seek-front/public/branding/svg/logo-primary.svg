@@ -1,0 +1,27 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Primary Logo: Icon + Wordmark -->
+  <defs>
+    <style>
+      .logo-icon { fill: #2D6E6E; }
+      .logo-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; font-size: 16px; font-weight: 500; fill: #1F1F1F; letter-spacing: -0.3px; }
+      .logo-text-sub { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; font-size: 10px; font-weight: 400; fill: #666; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+
+  <!-- Icon: A sophisticated mark suggesting "placed somewhere" -->
+  <!-- Central circle (the dot/place) -->
+  <circle cx="30" cy="30" r="18" class="logo-icon"/>
+
+  <!-- Subtle guides suggesting placement (minimal, not literal) -->
+  <!-- Vertical guide -->
+  <line x1="30" y1="2" x2="30" y2="10" stroke="#2D6E6E" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <line x1="30" y1="50" x2="30" y2="58" stroke="#2D6E6E" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Horizontal guide -->
+  <line x1="2" y1="30" x2="10" y2="30" stroke="#2D6E6E" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <line x1="50" y1="30" x2="58" y2="30" stroke="#2D6E6E" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Text below icon -->
+  <text x="30" y="80" text-anchor="middle" class="logo-text">Save It</text>
+  <text x="30" y="95" text-anchor="middle" class="logo-text">Somewhere</text>
+</svg>

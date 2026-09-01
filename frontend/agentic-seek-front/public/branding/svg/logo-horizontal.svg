@@ -1,0 +1,30 @@
+<svg viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .text-main {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        font-size: 28px;
+        font-weight: 500;
+        fill: #1F1F1F;
+        letter-spacing: -0.5px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .text-main { fill: #FAFBF8; }
+        .icon-main { fill: #E8F4F3; }
+        .icon-guide { stroke: #E8F4F3; }
+      }
+      .icon-main { fill: #2D6E6E; }
+      .icon-guide { stroke: #2D6E6E; }
+    </style>
+  </defs>
+
+  <!-- Icon (left side) -->
+  <circle cx="24" cy="40" r="18" class="icon-main"/>
+  <line x1="24" y1="16" x2="24" y2="24" class="icon-guide" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="24" y1="56" x2="24" y2="64" class="icon-guide" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="0" y1="40" x2="8" y2="40" class="icon-guide" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="40" y1="40" x2="48" y2="40" class="icon-guide" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Text (right side) -->
+  <text x="70" y="52" class="text-main">Save It Somewhere</text>
+</svg>

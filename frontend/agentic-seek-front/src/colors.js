@@ -1,18 +1,18 @@
 export const colors = {
-  // Primary colors - matching the dashboard theme
-  primary: "#2563eb",
-  primaryLight: "#dbeafe",
-  primaryDark: "#1d4ed8",
+  // Primary colors - Save It Somewhere brand (Teal Calm)
+  primary: "#2D6E6E",
+  primaryLight: "#E8F4F3",
+  primaryDark: "#1F4F4F",
 
   // Secondary colors - modern grays
   secondary: "#64748b",
   secondaryLight: "#f1f5f9",
   secondaryDark: "#1e293b",
 
-  // Accent colors
-  accent: "#f59e0b",
-  accentLight: "#fef3c7",
-  accentDark: "#d97706",
+  // Accent colors - Save It Somewhere warm gold
+  accent: "#C4A96E",
+  accentLight: "#E8DCC0",
+  accentDark: "#9D8555",
 
   // Status colors
   success: "#10b981",
@@ -39,12 +39,12 @@ export const colors = {
   black: "#000000",
 
   // Text colors
-  textPrimary: "#0f172a",
+  textPrimary: "#1F1F1F",
   textSecondary: "#64748b",
   textDisabled: "#94a3b8",
 
-  // Background colors
-  background: "#f8fafc",
+  // Background colors - Save It Somewhere brand
+  background: "#FAFBF8",
   card: "#ffffff",
 
   // Border colors
@@ -56,9 +56,16 @@ export const colors = {
   semiTransparent: "rgba(15, 23, 42, 0.6)",
 
   // Dark theme colors
-  darkBackground: "#0f172a",
+  darkBackground: "#0F0F0F",
   darkCard: "#1e293b",
   darkBorder: "#334155",
-  darkText: "#f8fafc",
+  darkText: "#FAFBF8",
   darkTextSecondary: "#cbd5e1",
+
+  // Brand specific colors
+  brandTeal: "#2D6E6E",
+  brandTealLight: "#E8F4F3",
+  brandGold: "#C4A96E",
+  brandNeutralDark: "#1F1F1F",
+  brandNeutralLight: "#FAFBF8",
 };
