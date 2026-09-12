@@ -691,4 +691,4 @@ Cualquier cuenta de AgenticSeek en X además de mi cuenta personal (https://x.co
 
  > [tcsenpai](https://github.com/tcsenpai) y [plitc](https://github.com/plitc) por ayudar con la dockerización del backend
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Fosowl/agenticSeek&type=Date)](https://star-history.dera.page/#Fosowl/agenticSeek&Date)

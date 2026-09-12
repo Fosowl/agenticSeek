@@ -692,4 +692,4 @@ AgenticSeekを改善する開発者を探しています！オープンなissue�
 
  > [tcsenpai](https://github.com/tcsenpai) と [plitc](https://github.com/plitc) がバックエンドのDocker化を支援
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Fosowl/agenticSeek&type=Date)](https://star-history.dera.page/#Fosowl/agenticSeek&Date)
