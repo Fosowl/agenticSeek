@@ -4,6 +4,8 @@ import sys
 import json
 import tempfile
 
+from unittest.mock import patch
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sources.browser_identity import (
@@ -38,7 +40,7 @@ class TestBrowserIdentity(unittest.TestCase):
         self.assertNotEqual(upgraded.label, first.label)
 
     def test_accept_lang_is_valid(self):
-        for lang, expected in [("en", "en-US,en;q=0.9"), ("fr", "fr-FR,fr;q=0.9")]:
+        for lang, expected in [("en", "en-US,en"), ("fr", "fr-FR,fr")]:
             ident = load_or_create_identity(
                 state_file=os.path.join(self.tmp.name, f"{lang}.json"), chrome_major=137, lang=lang)
             self.assertEqual(ident.accept_lang, expected)
@@ -87,6 +89,25 @@ class TestBrowserIdentity(unittest.TestCase):
         for key in ("vendor", "renderer", "unmasked_vendor", "unmasked_renderer",
                     "version", "shading_language_version"):
             self.assertIn(key, js["webgl"])
+
+    def test_persona_matches_host_os(self):
+        import sources.browser_identity as bi
+        with patch.object(bi, "host_os", return_value="windows"):
+            ident = bi.load_or_create_identity(
+                state_file=os.path.join(self.tmp.name, "h.json"), chrome_major=137, lang="en")
+            self.assertEqual(ident.os, "windows")
+        with patch.object(bi, "host_os", return_value="linux"):
+            # a persona saved on another OS class must be re-picked
+            ident2 = bi.load_or_create_identity(
+                state_file=os.path.join(self.tmp.name, "h.json"), chrome_major=137, lang="en")
+            self.assertEqual(ident2.os, "linux")
+
+    def test_corrupt_state_does_not_crash(self):
+        bad = os.path.join(self.tmp.name, "bad.json")
+        with open(bad, "w") as f:
+            f.write('{"schema_version": 1, "chrome_major": null}')
+        ident = load_or_create_identity(state_file=bad, chrome_major=137, lang="en")
+        self.assertEqual(ident.chrome_major, 137)
 
     def test_state_roundtrip(self):
         ident = load_or_create_identity(state_file=self.state, chrome_major=137, lang="en")

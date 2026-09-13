@@ -55,6 +55,18 @@ class TestSpoofingScriptStatic(unittest.TestCase):
         self.assertIn("cdc_", self.src)
         self.assertNotIn("cdc_adoQpoasnfa76pfcZLmcfl_Array", self.src)
 
+    def test_plugins_not_spoofed(self):
+        # real Chrome's PluginArray passes structural checks; a fake plain
+        # object fails instanceof/toString - so plugins must stay real
+        self.assertNotIn("patchGetter(N, 'plugins'", self.src)
+        self.assertNotIn("patchGetter(N, 'mimeTypes'", self.src)
+
+    def test_worker_visible_props_not_spoofed(self):
+        # platform/hardwareConcurrency/deviceMemory are real in Web Workers;
+        # spoofing them only on the main thread creates a detectable mismatch
+        for prop in ("platform", "hardwareConcurrency", "deviceMemory"):
+            self.assertNotIn(f"patchGetter(N, '{prop}'", self.src)
+
     def test_no_console_output(self):
         self.assertNotIn("console.", self.src)
 

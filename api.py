@@ -76,23 +76,17 @@ def initialize_system():
     personality_folder = "jarvis" if config.getboolean('MAIN', 'jarvis_personality') else "base"
     languages = config["MAIN"]["languages"].split(' ')
 
-    # Force headless mode in Docker containers
     headless = config.getboolean('BROWSER', 'headless_browser')
-    if is_running_in_docker() and not headless:
-        # Print prominent warning to console (visible in docker-compose output)
-        print("\n" + "*" * 70)
-        print("*** WARNING: Detected Docker environment - forcing headless_browser=True ***")
-        print("*** INFO: To see the browser, run 'python cli.py' on your host machine ***")
-        print("*" * 70 + "\n")
-
-        # Flush to ensure it's displayed immediately
-        sys.stdout.flush()
-
-        # Also log to file
-        logger.warning("Detected Docker environment - forcing headless_browser=True")
-        logger.info("To see the browser, run 'python cli.py' on your host machine instead")
-
-        headless = True
+    if is_running_in_docker():
+        # The container starts Xvfb (DISPLAY=:99), so run Chrome headed there:
+        # headless mode leaks tells (permission states, voices, software-only
+        # rendering) that a real window under Xvfb does not. Force headless
+        # explicitly with AGENTICSEEK_HEADLESS=1 if Xvfb is unavailable.
+        headless = os.getenv("AGENTICSEEK_HEADLESS", "0") == "1"
+        if headless:
+            logger.info("Docker: running browser headless (AGENTICSEEK_HEADLESS=1)")
+        else:
+            logger.info("Docker: running browser headed under Xvfb")
 
     provider = Provider(
         provider_name=config["MAIN"]["provider_name"],

@@ -33,12 +33,7 @@ def is_echo(text: str, last_spoken_text: str, min_consecutive_words: int = 3) ->
     spoken_words = last_spoken_text.split()
     
     if len(text_words) < min_consecutive_words:
-        # Short phrases are less likely to be echo, but check anyway
         pass
-    
-    # Check for consecutive word matches
-    # We check both directions: does text contain a sequence from spoken?
-    # and does spoken contain a sequence from text?
     
     for i in range(len(text_words) - min_consecutive_words + 1):
         # Extract a sequence of N consecutive words from transcribed text
@@ -50,7 +45,6 @@ def is_echo(text: str, last_spoken_text: str, min_consecutive_words: int = 3) ->
             return True
     
     # Also check: if spoken text contains a long sequence from transcribed
-    # (handles case where STT hears a subset of what was spoken)
     for i in range(len(spoken_words) - min_consecutive_words + 1):
         sequence = spoken_words[i:i + min_consecutive_words]
         sequence_str = " ".join(sequence)

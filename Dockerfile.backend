@@ -9,9 +9,14 @@ RUN apt-get update -y && apt-get install -y \
     ca-certificates \
     unzip \
     xvfb \
+    x11-utils \
+    fonts-liberation \
+    fonts-crosextra-carlito \
+    fonts-crosextra-caladea \
+    fonts-dejavu-core \
+    fonts-urw-base35 \
     libxss1 \
     #libappindicator1 \
-    fonts-liberation \
     libnss3 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
@@ -100,4 +105,11 @@ COPY config.ini .
 EXPOSE 8000
 
 # Run the application
+COPY docker/fonts.local.conf /etc/fonts/local.conf
+COPY scripts/docker_start.sh /usr/local/bin/docker_start.sh
+RUN chmod +x /usr/local/bin/docker_start.sh
+
+# Starts Xvfb then runs the backend: Chrome runs headed under Xvfb (fewer
+# headless detection tells); AGENTICSEEK_HEADLESS=1 forces headless.
+ENTRYPOINT ["docker_start.sh"]
 CMD ["python3", "api.py"]

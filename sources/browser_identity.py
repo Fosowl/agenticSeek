@@ -20,6 +20,7 @@ import datetime
 import json
 import os
 import random
+import sys
 import tempfile
 
 SCHEMA_VERSION = 1
@@ -197,6 +198,15 @@ def host_iana_timezone():
     return None
 
 
+def host_os() -> str:
+    """The OS class of the machine running the browser."""
+    if sys.platform.startswith("win"):
+        return "windows"
+    if sys.platform.startswith("darwin"):
+        return "macos"
+    return "linux"
+
+
 def default_state_path() -> str:
     return os.path.join(os.getcwd(), ".browser_profile", "identity.json")
 
@@ -237,14 +247,16 @@ class BrowserIdentity:
 
     @property
     def accept_lang(self) -> str:
-        # valid Accept-Language like a real Chrome: "en-US,en;q=0.9"
+        # comma list for the --accept-lang flag. No q-values: Chrome derives
+        # the Accept-Language header itself, and a q-suffix otherwise leaks
+        # into worker navigator.languages as a bogus "en;q=0.9" tag.
         base = self.languages[0].split("-")[0].lower()
         parts, seen = [], set()
         for part in list(self.languages) + [base]:
             if part.lower() not in seen:
                 seen.add(part.lower())
                 parts.append(part)
-        return ",".join(parts[:-1]) + f",{parts[-1]};q=0.9"
+        return ",".join(parts)
 
     @property
     def window_size(self):
@@ -378,17 +390,29 @@ def load_or_create_identity(state_file: str | None = None,
     except Exception:
         state = None
 
+    def _stored_major(s):
+        try:
+            return int(s.get("chrome_major"))
+        except (TypeError, ValueError):
+            return -1  # corrupt state: force a re-pick below
+
     identity = None
-    if state and int(state.get("chrome_major", -1)) == int(chrome_major):
+    if state and _stored_major(state) == int(chrome_major):
         try:
             state.setdefault("languages", languages)
             identity = BrowserIdentity.from_state(state)
         except Exception:
             identity = None
+        if identity is not None and identity.os != host_os():
+            # The persona OS must match the host: Web Workers report the real
+            # navigator (no script injection reaches them), so a mismatched
+            # platform/hardware claim is exactly what bot detectors compare.
+            identity = None
 
     if identity is None:
         previous_label = (state or {}).get("label")
-        candidates = [p for p in DEVICE_PROFILES if p["label"] != previous_label] or DEVICE_PROFILES
+        matching = [p for p in DEVICE_PROFILES if p["os"] == host_os()] or DEVICE_PROFILES
+        candidates = [p for p in matching if p["label"] != previous_label] or matching
         profile = random.choice(candidates)
         identity = BrowserIdentity(
             profile=profile,

@@ -14,6 +14,7 @@ chrome_bundle/
 .logs/
 .screenshots/*.png
 .screenshots/*.jpg
+.browser_profile/
 conversations/
 agentic_env/*
 agentic_seek_env/*

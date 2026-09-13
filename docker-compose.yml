@@ -83,7 +83,7 @@ services:
     volumes:
       - ./:/app
       - ${WORK_DIR:-.}:/opt/workspace
-    command: python3 api.py
+    # no command override: the image ENTRYPOINT starts Xvfb first, then the CMD
     environment:
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
       - REDIS_URL=${REDIS_BASE_URL:-redis://redis:6379/0}

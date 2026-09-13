@@ -3,6 +3,8 @@ import os
 import sys
 import tempfile
 
+from unittest.mock import patch
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from unittest.mock import patch, MagicMock
@@ -48,9 +50,18 @@ class TestPersistentProfile(unittest.TestCase):
         self.assertFalse(profile_in_use(self.profile))
 
     def test_profile_in_use_with_live_lock(self):
+        import socket as _socket
         lock = os.path.join(self.profile, "SingletonLock")
-        os.symlink(f"fakehost-{os.getpid()}", lock)
+        os.symlink(f"{_socket.gethostname()}-{os.getpid()}", lock)
         self.assertTrue(profile_in_use(self.profile))
+
+    def test_lock_from_other_container_is_stale(self):
+        # containers get fresh hostnames; a recycled small pid must not make
+        # an old lock look alive
+        lock = os.path.join(self.profile, "SingletonLock")
+        os.symlink("oldcontainer-1", lock)  # pid 1 always exists
+        self.assertFalse(profile_in_use(self.profile))
+        self.assertFalse(os.path.lexists(lock))
 
     def test_stale_lock_is_cleared(self):
         lock = os.path.join(self.profile, "SingletonLock")
@@ -68,6 +79,13 @@ class TestPersistentProfile(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(clone, "Cookies")))
         self.assertFalse(os.path.lexists(os.path.join(clone, "SingletonLock")))
         self.assertNotEqual(clone, self.profile)
+
+    def test_display_available_false_paths(self):
+        from sources.browser import display_available
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(display_available())  # no DISPLAY
+        with patch.dict(os.environ, {"DISPLAY": ":77"}, clear=True):
+            self.assertFalse(display_available())  # no X server on :77
 
     def test_cleanup_legacy_removes_old_tmp_profiles(self):
         old_dir = os.path.join(tempfile.gettempdir(), "chrome_profile_testlegacy")

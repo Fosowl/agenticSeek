@@ -92,17 +92,18 @@
   });
 
   // ------------------------------------------------------------------ navigator
+  // NOTE: platform, hardwareConcurrency and deviceMemory are deliberately
+  // NOT spoofed. Web Workers expose the real values (script injection does
+  // not reach worker contexts), so any main-thread claim that differs from
+  // the host is an instant "inconsistent navigator" bot flag. The persona is
+  // instead chosen to match the host OS (see browser_identity.host_os), so
+  // the real values are already consistent everywhere.
   safe(() => {
     const N = Object.getPrototypeOf(navigator); // Navigator.prototype
     // real value in a clean profile is false, not undefined
     patchGetter(N, 'webdriver', () => false);
-    if (I.navigator.platform) { patchGetter(N, 'platform', () => I.navigator.platform); }
     if (I.navigator.vendor) { patchGetter(N, 'vendor', () => I.navigator.vendor); }
     if (I.navigator.languages) { patchGetter(N, 'languages', () => I.navigator.languages); }
-    if (I.navigator.hardwareConcurrency) {
-      patchGetter(N, 'hardwareConcurrency', () => I.navigator.hardwareConcurrency);
-    }
-    if (I.navigator.deviceMemory) { patchGetter(N, 'deviceMemory', () => I.navigator.deviceMemory); }
   });
 
   // ----------------------------------------------------- user-agent client hints
@@ -110,8 +111,10 @@
   // HTTP sec-ch-ua-* headers (overridden via CDP on the Python side).
   safe(() => {
     const ua = I.navigator.userAgentData;
-    if (!ua) { return; }
+    // real Chrome exposes userAgentData on secure contexts only
+    if (!ua || !window.isSecureContext) { return; }
     const impl = {
+      [Symbol.toStringTag]: 'NavigatorUAData',
       brands: ua.brands,
       mobile: ua.mobile,
       platform: ua.platform,
@@ -130,50 +133,14 @@
     patchGetter(Object.getPrototypeOf(navigator), 'userAgentData', () => impl);
   });
 
-  // ------------------------------------------------------------ plugins/mimeTypes
-  // Shape of a real modern Chrome: 5 PDF plugins, 2 shared mime types.
-  // Built once: plugins === plugins on every read, length never changes.
-  safe(() => {
-    const pluginNames = [
-      'PDF Viewer', 'Chrome PDF Viewer', 'Chromium PDF Viewer',
-      'Microsoft Edge PDF Viewer', 'WebKit built-in PDF',
-    ];
-    function arrayLike(items) {
-      const obj = {};
-      for (let i = 0; i < items.length; i++) { obj[i] = items[i]; }
-      obj.length = items.length;
-      obj.item = registerNative(function item(i) {
-        return (i >= 0 && i < items.length) ? items[i] : null;
-      }, 'item');
-      obj.namedItem = registerNative(function namedItem(name) {
-        return items.find((x) => (x.type || x.name) === name) || null;
-      }, 'namedItem');
-      obj[Symbol.iterator] = registerNative(function* values() {
-        for (const x of items) { yield x; }
-      }, 'values');
-      return obj;
-    }
-
-    const mime0 = { type: 'application/pdf', suffixes: 'pdf', description: 'Portable Document Format', enabledPlugin: null };
-    const mime1 = { type: 'text/pdf', suffixes: 'pdf', description: 'Portable Document Format', enabledPlugin: null };
-    const mimes = [mime0, mime1];
-    const plugins = [];
-    for (const name of pluginNames) {
-      const plugin = arrayLike(mimes);
-      plugin.name = name;
-      plugin.filename = 'internal-pdf-viewer';
-      plugin.description = 'Portable Document Format';
-      plugins.push(plugin);
-    }
-    // both mime types point back at the first plugin, like the real thing
-    mime0.enabledPlugin = plugins[0];
-    mime1.enabledPlugin = plugins[0];
-    const pluginArray = arrayLike(plugins);
-    const mimeArray = arrayLike(mimes);
-    const N = Object.getPrototypeOf(navigator);
-    patchGetter(N, 'plugins', () => pluginArray);
-    patchGetter(N, 'mimeTypes', () => mimeArray);
-  });
+  // --------------------------------------------------------- plugins/mimeTypes
+  // NOT spoofed. A real modern Chrome (headed and --headless=new since
+  // ~Chrome 90) already exposes a genuine PluginArray with the 5 PDF
+  // entries, which passes every structural check (instanceof PluginArray,
+  // [object PluginArray] toString tag, Plugin items...). Our old fake was a
+  // plain object and FAILED those checks - it replaced something correct
+  // with something detectable. Faking plugins only ever mattered for the
+  // long-dead classic headless, which reported zero plugins.
 
   // --------------------------------------------------------------------- screen
   // Patch individual properties on Screen.prototype so unknown/future
