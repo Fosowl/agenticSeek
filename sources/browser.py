@@ -9,8 +9,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from typing import List, Tuple, Type, Dict
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-from fake_useragent import UserAgent
-from selenium_stealth import stealth
 import undetected_chromedriver as uc
 import chromedriver_autoinstaller
 import certifi
@@ -20,10 +18,11 @@ import time
 import random
 import os
 import shutil
-import uuid
 import socket
 import tempfile
 import markdownify
+import json
+import hashlib
 import sys
 import re
 
@@ -31,6 +30,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sources.utility import pretty_print, animate_thinking
 from sources.logger import Logger
+from sources.browser_identity import BrowserIdentity, load_or_create_identity
+from sources.crx_utils import extract_crx, extension_installed
 
 
 def get_chrome_path() -> str:
@@ -68,15 +69,6 @@ def get_chrome_path() -> str:
         print(f"Chrome path saved to environment variable CHROME_EXECUTABLE_PATH")
         return path
     return None
-
-def get_random_user_agent() -> str:
-    """Get a random user agent string with associated vendor."""
-    user_agents = [
-        {"ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36", "vendor": "Google Inc."},
-        {"ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36", "vendor": "Apple Inc."},
-        {"ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36", "vendor": "Google Inc."},
-    ]
-    return random.choice(user_agents)
 
 def get_chromedriver_version(chromedriver_path: str) -> str:
     """Get the major version of a chromedriver binary. Returns empty string on failure."""
@@ -160,8 +152,90 @@ def get_free_port() -> int:
         s.bind(('', 0))
         return s.getsockname()[1]
 
-def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> Options:
-    """Create Chrome options - separated for reusability."""
+def persistent_profile_dir() -> str:
+    """
+    Stable, on-disk Chrome profile under .browser_profile/chrome_data.
+    Cookies, history and anti-bot clearance tokens surviving restarts is
+    worth far more than the per-run randomization the old /tmp profiles had.
+    """
+    return os.path.abspath(os.path.join(os.getcwd(), ".browser_profile", "chrome_data"))
+
+
+def profile_in_use(profile_dir: str) -> bool:
+    """True when a live Chrome instance holds the profile's singleton lock."""
+    lock = os.path.join(profile_dir, "SingletonLock")
+    if os.path.lexists(lock):
+        try:
+            target = os.readlink(lock)  # format: "<hostname>-<pid>"
+            pid = int(target.rsplit("-", 1)[1])
+            os.kill(pid, 0)  # raises when the process is dead
+            return True
+        except (ValueError, IndexError, OSError):
+            # stale lock from a crashed Chrome: remove it, do not block forever
+            try:
+                os.unlink(lock)
+            except OSError:
+                pass
+            return False
+    if sys.platform.startswith("win") and os.path.exists(os.path.join(profile_dir, "lockfile")):
+        return True
+    return False
+
+
+def clone_profile(profile_dir: str) -> str:
+    """
+    Copy the profile to a temp dir so a second browser instance can run
+    beside the first (e.g. cli.py while api.py is up). Locks and caches are
+    excluded; cookies and preferences carry over.
+    """
+    clone = tempfile.mkdtemp(prefix="chrome_profile_clone_")
+    shutil.copytree(profile_dir, clone, dirs_exist_ok=True, symlinks=True,
+                    ignore=shutil.ignore_patterns(
+                        "Singleton*", "lockfile", "Cache", "Code Cache",
+                        "GPUCache", "ScriptCache"))
+    return clone
+
+
+def resolve_profile_dir() -> str:
+    """The persistent profile, or a clone of it when it is already in use."""
+    profile_dir = persistent_profile_dir()
+    if os.path.isdir(profile_dir) and profile_in_use(profile_dir):
+        pretty_print("Browser profile is in use by another instance; using a temporary clone (cookies carried over).", color="warning")
+        return clone_profile(profile_dir)
+    os.makedirs(profile_dir, exist_ok=True)
+    return profile_dir
+
+
+_legacy_profiles_cleaned = False
+def cleanup_legacy_profiles(max_age_hours: int = 24) -> None:
+    """Best-effort removal of the /tmp/chrome_profile_* dirs old versions leaked."""
+    global _legacy_profiles_cleaned
+    if _legacy_profiles_cleaned:
+        return
+    _legacy_profiles_cleaned = True
+    try:
+        for name in os.listdir(tempfile.gettempdir()):
+            if not name.startswith("chrome_profile_"):
+                continue
+            path = os.path.join(tempfile.gettempdir(), name)
+            try:
+                if time.time() - os.path.getmtime(path) > max_age_hours * 3600:
+                    shutil.rmtree(path, ignore_errors=True)
+            except OSError:
+                continue
+    except OSError:
+        pass
+
+
+def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en", identity=None, anticaptcha=True) -> Options:
+    """Create Chrome options - separated for reusability.
+
+    Every identity-derived flag (user-agent, accept-lang, window-size) comes
+    from a single BrowserIdentity, so the HTTP layer, the JS layer and the
+    window geometry can never contradict each other.
+    """
+    if identity is None:
+        identity = load_or_create_identity(lang=lang)
     chrome_options = Options()
     chrome_path = get_chrome_path()
     
@@ -172,20 +246,30 @@ def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nop
     if headless:
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-webgl")
+        # Restore software WebGL: Chrome >= 137 returns a null WebGL context in
+        # headless without it, and "no WebGL" contradicts the spoofed identity
+        # (the SwiftShader backend itself is masked by the spoofed strings).
+        chrome_options.add_argument("--enable-unsafe-swiftshader")
+        # --disable-webgl intentionally removed: a missing WebGL context
+        # contradicts the spoofed WebGL identity and is itself a bot signal.
     
-    user_agent = get_random_user_agent()
-    width, height = (1920, 1080)
-    profile_dir = f"/tmp/chrome_profile_{uuid.uuid4().hex[:8]}"
+    profile_dir = resolve_profile_dir()
     
     # Core options
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument(f'--user-data-dir={profile_dir}')
-    chrome_options.add_argument(f"--accept-lang={lang}-{lang.upper()},{lang};q=0.9")
-    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument(f"--accept-lang={identity.accept_lang}")
+    # Anti-captcha extension (NopeCHA) loaded as an unpacked directory: the
+    # old packed-CRX path could never work (--disable-extensions was always
+    # passed too). --headless=new supports extensions since Chrome 112.
+    extension_dir = extract_crx(crx_path) if anticaptcha else None
+    if extension_dir:
+        chrome_options.add_argument(f"--disable-extensions-except={extension_dir}")
+        chrome_options.add_argument(f"--load-extension={extension_dir}")
+    else:
+        chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-background-timer-throttling")
-    chrome_options.add_argument("--timezone=Europe/Paris")
     chrome_options.add_argument(f'--remote-debugging-port={get_free_port()}')
     chrome_options.add_argument('--disable-background-timer-throttling')
     chrome_options.add_argument('--disable-backgrounding-occluded-windows')
@@ -198,14 +282,11 @@ def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nop
     chrome_options.add_argument("--disable-features=SitePerProcess,IsolateOrigins")
     chrome_options.add_argument("--enable-features=NetworkService,NetworkServiceInProcess")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument(f'user-agent={user_agent["ua"]}')
-    chrome_options.add_argument(f'--window-size={width},{height}')
-    
-    if not stealth_mode:
-        if not os.path.exists(crx_path):
-            pretty_print(f"Anti-captcha CRX not found at {crx_path}.", color="failure")
-        else:
-            chrome_options.add_extension(crx_path)
+    chrome_options.add_argument(f'user-agent={identity.user_agent}')
+    chrome_options.add_argument(f'--window-size={identity.window_size[0]},{identity.window_size[1]}')
+    # NOTE: --timezone=Europe/Paris removed: not a real Chromium switch (it
+    # was silently ignored); timezone is emulated via CDP in
+    # apply_stealth_injection, consistent with the identity and the host IP.
     
     if not stealth_mode:
         security_prefs = {
@@ -234,53 +315,190 @@ def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nop
     
     return chrome_options
 
-def create_undetected_chromedriver(service, chrome_options) -> webdriver.Chrome:
-    """Create an undetected ChromeDriver instance with proper error handling."""
+def ad_hoc_codesign(binary_path: str) -> bool:
+    """Re-sign a patched binary with an ad-hoc signature. macOS only."""
+    if not sys.platform.startswith("darwin"):
+        return False
     try:
-        driver = uc.Chrome(service=service, options=chrome_options)
+        result = subprocess.run(
+            ["codesign", "--force", "--sign", "-", binary_path],
+            capture_output=True, text=True, timeout=30,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def prepare_uc_chromedriver(chromedriver_path: str) -> str:
+    """
+    Hand undetected-chromedriver a writable, version-matched driver binary.
+
+    uc.Chrome ignores any provided Service and always runs its own Patcher on
+    `driver_executable_path`. Left alone, that patcher downloads the newest
+    Chrome-for-Testing milestone (e.g. 153), which mismatches the installed
+    browser (e.g. Docker's pinned 134) and kills the session with
+    "This version of ChromeDriver only supports Chrome version XXX".
+    With an explicit executable path, uc only patches that binary in place and
+    never downloads. We copy to a cache first so the system/container binary
+    stays pristine (and to avoid patching a file another process may hold).
+    """
+    try:
+        with open(chromedriver_path, "rb") as f:
+            digest = hashlib.md5(f.read()).hexdigest()[:10]
+        cache_dir = os.path.join(os.getcwd(), ".browser_profile")
+        os.makedirs(cache_dir, exist_ok=True)
+        cached = os.path.join(cache_dir, f"uc_chromedriver_{digest}")
+        if not os.path.exists(cached):
+            tmp = f"{cached}.tmp"
+            shutil.copy2(chromedriver_path, tmp)
+            os.chmod(tmp, 0o755)
+            os.replace(tmp, cached)
+        return cached
+    except Exception as e:
+        pretty_print(f"Stealth: could not cache chromedriver copy ({e}); using original path.", color="warning")
+        return chromedriver_path
+
+
+def create_undetected_chromedriver(service, chrome_options, identity=None, lang="en", crx_path="./crx/nopecha.crx", anticaptcha=True) -> webdriver.Chrome:
+    """
+    Create an undetected ChromeDriver instance with proper error handling.
+
+    The version-matched driver from install_chromedriver() (via `service.path`)
+    is passed explicitly as driver_executable_path: uc patches that binary and
+    skips its "download latest milestone" logic entirely (see
+    prepare_uc_chromedriver).
+    """
+    patched_driver = prepare_uc_chromedriver(service.path)
+    try:
+        driver = uc.Chrome(driver_executable_path=patched_driver, options=chrome_options)
     except Exception as e:
         pretty_print(f"Failed to create Chrome driver: {str(e)}. Trying to bypass SSL...", color="failure")
         try:
             bypass_ssl()
-            # Create NEW options object - this is the key fix
+            # Create NEW options object from the SAME identity - this is the key fix
             fresh_options = create_chrome_options(
                 headless=any("--headless" in arg for arg in chrome_options.arguments),
                 stealth_mode=True,  # We're in stealth mode if we reach this point
-                crx_path="./crx/nopecha.crx"  # Default path
+                crx_path=crx_path,
+                lang=lang,
+                identity=identity,
+                anticaptcha=anticaptcha
             )
-            driver = uc.Chrome(service=service, options=fresh_options)
+            driver = uc.Chrome(driver_executable_path=patched_driver, options=fresh_options)
         except Exception as e:
+            # macOS/Apple Silicon: uc's in-place patch invalidates the binary's
+            # code signature and the kernel SIGKILLs it (service exit -9).
+            # Re-sign ad hoc and retry: uc now sees the binary as already
+            # patched and starts it with a valid (ad-hoc) signature.
+            if ad_hoc_codesign(patched_driver):
+                try:
+                    pretty_print("Stealth: re-signed the patched chromedriver, retrying.", color="status")
+                    retry_options = create_chrome_options(
+                        headless=any("--headless" in arg for arg in chrome_options.arguments),
+                        stealth_mode=True,
+                        crx_path=crx_path,
+                        lang=lang,
+                        identity=identity,
+                        anticaptcha=anticaptcha
+                    )
+                    driver = uc.Chrome(driver_executable_path=patched_driver, options=retry_options)
+                    return driver
+                except Exception as retry_error:
+                    pretty_print(f"Failed to create Chrome driver after re-sign:\n{str(retry_error)}.", color="failure")
             pretty_print(f"Failed to create Chrome driver, fallback failed:\n{str(e)}.", color="failure")
             raise e
-    
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+    # navigator.webdriver is set to false by the spoofing script injected on
+    # every new document (the old one-shot "undefined" patch was itself a
+    # tell: a real Chrome reports false, not undefined).
     return driver
 
-def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> webdriver.Chrome:
-    """Create a Chrome WebDriver with specified options."""
+def build_stealth_source(identity: BrowserIdentity) -> str:
+    """
+    Build the spoofing script injected into every new document.
+    The identity is embedded as a script-scoped const: page scripts cannot
+    read it and it never appears on `window`.
+    """
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_scripts", "spoofing.js")
+    with open(script_path, "r", encoding="utf-8") as f:
+        body = f.read()
+    identity_json = json.dumps(identity.to_js(), separators=(",", ":"))
+    return f"const __IDENTITY__ = {identity_json};\n{body}"
+
+
+def apply_stealth_injection(driver, identity: BrowserIdentity) -> None:
+    """
+    Apply one identity to an existing driver:
+      - register the spoofing script on every new document, so it runs before
+        page scripts (the old one-shot execute_script was lost on navigation)
+      - override the user agent AND its client hints, so the HTTP sec-ch-ua-*
+        headers match the JS layer
+      - emulate timezone and locale consistently
+      - run the script once on the currently open document, if any
+    Failures degrade gracefully: a partial stealth layer still beats none.
+    """
+    source = build_stealth_source(identity)
+    try:
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": source})
+    except Exception as e:
+        pretty_print(f"Stealth: document injection unavailable: {e}", color="warning")
+    try:
+        override = {"userAgent": identity.user_agent, "userAgentMetadata": identity.to_cdp_user_agent_metadata()}
+        try:
+            driver.execute_cdp_cmd("Network.setUserAgentOverride", override)
+        except Exception:
+            driver.execute_cdp_cmd("Network.enable", {})
+            driver.execute_cdp_cmd("Network.setUserAgentOverride", override)
+    except Exception as e:
+        pretty_print(f"Stealth: user agent override unavailable: {e}", color="warning")
+    if identity.timezone:
+        try:
+            driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {"timezoneId": identity.timezone})
+        except Exception:
+            pass
+    try:
+        driver.execute_cdp_cmd("Emulation.setLocaleOverride", {"locale": identity.locale})
+    except Exception:
+        pass
+    try:
+        driver.execute_script(source)  # cover the document already open, if any
+    except Exception:
+        pass
+
+
+def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en", anticaptcha=True) -> webdriver.Chrome:
+    """
+    Create a Chrome WebDriver with specified options.
+
+    One BrowserIdentity is created (or reused from disk) and drives every
+    layer: chrome flags, the driver, the CDP overrides and the injected JS.
+    The injection is applied on both the undetected and the plain path, so a
+    configuration mistake cannot leave the browser unspoofed.
+    """
     # Warn if trying to run non-headless in Docker
     if not headless and os.path.exists('/.dockerenv'):
         print("[WARNING] Running non-headless browser in Docker may fail!")
         print("[WARNING] Consider setting headless=True or headless_browser=True in config.ini")
     
-    chrome_options = create_chrome_options(headless, stealth_mode, crx_path, lang)
+    identity = load_or_create_identity(lang=lang)
+    cleanup_legacy_profiles()
+    chrome_options = create_chrome_options(headless, stealth_mode, crx_path, lang, identity=identity, anticaptcha=anticaptcha)
     chromedriver_path = install_chromedriver()
     service = Service(chromedriver_path)
     
     if stealth_mode:
-        driver = create_undetected_chromedriver(service, chrome_options)
-        user_agent = get_random_user_agent()
-        stealth(driver,
-            languages=["en-US", "en"],
-            vendor=user_agent["vendor"],
-            platform="Win64" if "windows" in user_agent["ua"].lower() else "MacIntel" if "mac" in user_agent["ua"].lower() else "Linux x86_64",
-            webgl_vendor="Intel Inc.",
-            renderer="Intel Iris OpenGL Engine",
-            fix_hairline=True,
-        )
-        return driver
+        try:
+            driver = create_undetected_chromedriver(service, chrome_options, identity=identity, lang=lang, crx_path=crx_path)
+        except Exception as e:
+            pretty_print(f"Undetected ChromeDriver failed ({e}).\nFalling back to the standard ChromeDriver; identity spoofing stays active.", color="warning")
+            # fresh profile dir: the failed uc attempt may still hold a lock on it
+            fresh_options = create_chrome_options(
+                headless=headless, stealth_mode=True, crx_path=crx_path, lang=lang,
+                identity=identity, anticaptcha=anticaptcha)
+            driver = webdriver.Chrome(service=service, options=fresh_options)
     else:
-        return webdriver.Chrome(service=service, options=chrome_options)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    apply_stealth_injection(driver, identity)
+    return driver
 
 class Browser:
     def __init__(self, driver, anticaptcha_manual_install=False):
@@ -296,14 +514,15 @@ class Browser:
         except Exception as e:
             raise Exception(f"Failed to initialize browser: {str(e)}")
         self.setup_tabs()
-        self.patch_browser_fingerprint()
-        if anticaptcha_manual_install:
+        # the Web Store page is a dead end in headless; only fall back to it
+        # when the bundled CRX could not be loaded automatically
+        if anticaptcha_manual_install and not extension_installed():
             self.load_anticatpcha_manually()
     
     def setup_tabs(self):
         self.tabs = self.driver.window_handles
         try:
-            self.driver.get("https://www.google.com")
+            self.driver.get("about:blank")  # neutral start page: a google.com warmup is a CAPTCHA magnet
         except Exception as e:
             self.logger.log(f"Failed to setup initial tab:" + str(e))
             pass
@@ -338,10 +557,6 @@ class Browser:
                 self.driver.execute_script(f"window.scrollBy(0, -{random.randint(50, 300)});")
                 time.sleep(random.uniform(0.3, 1.0))
 
-    def patch_browser_fingerprint(self) -> None:
-        script = self.load_js("spoofing.js")
-        self.driver.execute_script(script)
-    
     def go_to(self, url:str) -> bool:
         """Navigate to a specified URL."""
         time.sleep(random.uniform(0.4, 2.5))
