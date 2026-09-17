@@ -19,6 +19,9 @@ class searxSearch(Tools):
         self.name = "searxSearch"
         self.description = "A tool for searching a SearxNG for web search"
         self.base_url = base_url or os.getenv("SEARXNG_BASE_URL")  # Requires a SearxNG base URL
+        # TLS verification on by default (CWE-295); self-signed local
+        # instances can opt out via SEARXNG_VERIFY_SSL=0/false/no.
+        self.verify_ssl = os.getenv("SEARXNG_VERIFY_SSL", "true").lower() not in ("0", "false", "no")
         self.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
         self.paywall_keywords = [
             "Member-only", "access denied", "restricted content", "404", "this page is not working"
@@ -88,7 +91,7 @@ class searxSearch(Tools):
             'theme': 'simple'
         }).encode('utf-8')
         try:
-            response = requests.post(search_url, headers=headers, data=data, verify=False)
+            response = requests.post(search_url, headers=headers, data=data, verify=self.verify_ssl)
             response.raise_for_status()
             html_content = response.text
             soup = BeautifulSoup(html_content, 'html.parser')
