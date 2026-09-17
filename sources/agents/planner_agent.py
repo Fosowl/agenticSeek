@@ -94,7 +94,7 @@ class PlannerAgent(Agent):
                             'id': task['id'],
                             'task': task['task']
                         }
-                    except:
+                    except Exception:
                         self.logger.warning("Missing field in json plan.")
                         return []
                     self.logger.info(f"Created agent {task['agent']} with task: {task['task']}")
