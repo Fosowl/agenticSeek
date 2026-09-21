@@ -1,3 +1,5 @@
+import time
+
 import requests
 from bs4 import BeautifulSoup
 import sys
@@ -20,6 +22,9 @@ class searxSearch(Tools):
         self.description = "A tool for searching a SearxNG for web search"
         self.base_url = base_url or os.getenv("SEARXNG_BASE_URL")  # Requires a SearxNG base URL
         self.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        # Sane network bounds: without a timeout a hung SearxNG stalls the agent loop.
+        self.request_timeout = 15
+        self.max_attempts = 3
         self.paywall_keywords = [
             "Member-only", "access denied", "restricted content", "404", "this page is not working"
         ]
@@ -59,8 +64,45 @@ class searxSearch(Tools):
             statuses.append(status)
         return statuses
     
+    def _parse_html_results(self, html_content: str) -> list:
+        """Extract results from the SearxNG HTML results page."""
+        soup = BeautifulSoup(html_content, 'html.parser')
+        results = []
+        for article in soup.find_all('article', class_='result'):
+            url_header = article.find('a', class_='url_header')
+            if url_header:
+                url = url_header['href']
+                title = article.find('h3').text.strip() if article.find('h3') else "No Title"
+                description = article.find('p', class_='content').text.strip() if article.find('p', class_='content') else "No Description"
+                results.append(f"Title:{title}\nSnippet:{description}\nLink:{url}")
+        return results
+
+    def _search_json_api(self, query: str) -> list:
+        """Fallback: query the SearxNG JSON API, which is stable across UI
+        template changes. Requires "json" in search.formats of the SearxNG
+        settings; returns [] when the API is unavailable or disabled."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/search",
+                params={'q': query, 'format': 'json', 'categories': 'general', 'language': 'auto', 'safesearch': '0'},
+                headers={'User-Agent': self.user_agent, 'Accept': 'application/json'},
+                timeout=self.request_timeout,
+                verify=False
+            )
+            response.raise_for_status()
+            results = []
+            for r in response.json().get('results', [])[:20]:
+                title = r.get('title') or 'No Title'
+                content = r.get('content') or 'No Description'
+                results.append(f"Title:{title}\nSnippet:{content}\nLink:{r.get('url', '')}")
+            return results
+        except (requests.exceptions.RequestException, ValueError):
+            return []
+
     def execute(self, blocks: list, safety: bool = False) -> str:
-        """Executes a search query against a SearxNG instance using POST and extracts URLs and titles."""
+        """Executes a search query against a SearxNG instance using POST and extracts URLs and titles.
+        Retries transient failures with backoff and falls back to the JSON API
+        when the HTML template yields nothing."""
         if not blocks:
             return "Error: No search query provided."
 
@@ -87,24 +129,24 @@ class searxSearch(Tools):
             'safesearch': '0',
             'theme': 'simple'
         }).encode('utf-8')
-        try:
-            response = requests.post(search_url, headers=headers, data=data, verify=False)
-            response.raise_for_status()
-            html_content = response.text
-            soup = BeautifulSoup(html_content, 'html.parser')
-            results = []
-            for article in soup.find_all('article', class_='result'):
-                url_header = article.find('a', class_='url_header')
-                if url_header:
-                    url = url_header['href']
-                    title = article.find('h3').text.strip() if article.find('h3') else "No Title"
-                    description = article.find('p', class_='content').text.strip() if article.find('p', class_='content') else "No Description"
-                    results.append(f"Title:{title}\nSnippet:{description}\nLink:{url}")
-            if len(results) == 0:
-                return "No search results, web search failed."
-            return "\n\n".join(results)  # Return results as a single string, separated by newlines
-        except requests.exceptions.RequestException as e:
-            return f"Error during search: SearxNG unavailable. Did you run start_services.sh? Is Docker still running? ({str(e)})"
+
+        last_error = None
+        for attempt in range(self.max_attempts):
+            try:
+                response = requests.post(search_url, headers=headers, data=data, verify=False, timeout=self.request_timeout)
+                response.raise_for_status()
+                results = self._parse_html_results(response.text)
+                if not results:
+                    # HTML template change or an empty result set: try the JSON API.
+                    results = self._search_json_api(query)
+                if results:
+                    return "\n\n".join(results)  # Return results as a single string, separated by newlines
+                last_error = "No search results, web search failed."
+            except requests.exceptions.RequestException as e:
+                last_error = f"Error during search: SearxNG unavailable. Did you run start_services.sh? Is Docker still running? ({str(e)})"
+            if attempt < self.max_attempts - 1:
+                time.sleep(1.0 * (attempt + 1))  # brief backoff, then retry
+        return last_error
 
     def execution_failure_check(self, output: str) -> bool:
         """
