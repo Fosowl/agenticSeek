@@ -26,6 +26,7 @@ if __name__ == "__main__": # if running as a script for individual testing
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sources.logger import Logger
+from sources.workspace import ensure_work_dir, get_work_dir, resolve_workspace_path
 
 class Tools():
     """
@@ -50,28 +51,19 @@ class Tools():
     def set_allow_language_exec_bash(self, value: bool) -> None:
         self.allow_language_exec_bash = value 
 
-    def safe_get_work_dir_path(self):
-        path = None
-        path = os.getenv('WORK_DIR', path)
-        if path is None or path == "":
-            path = self.config['MAIN']['work_dir'] if 'MAIN' in self.config and 'work_dir' in self.config['MAIN'] else None
-        if path is None or path == "":
-            raise Exception("No work dir specified, please specify a work dir in .env file.")
-        return path
-    
     def config_exists(self):
         """Check if the config file exists."""
         return os.path.exists('./config.ini')
 
     def create_work_dir(self):
-        """Create the work directory if it does not exist."""
-        default_path = os.path.dirname(os.getcwd())
+        """Create and return the isolated agent workspace directory."""
         if self.config_exists():
             self.config.read('./config.ini')
-            workdir_path = self.safe_get_work_dir_path()
-        else:
-            workdir_path = default_path
-        return workdir_path
+        return ensure_work_dir()
+
+    def resolve_path(self, path: str) -> str:
+        """Resolve a path inside the agent workspace, rejecting escapes."""
+        return resolve_workspace_path(path, self.work_dir)
 
     @abstractmethod
     def execute(self, blocks:[str], safety:bool) -> str:
@@ -120,12 +112,16 @@ class Tools():
         self.logger.info(f"Saving blocks to {save_path}")
         save_path_dir = os.path.dirname(save_path)
         save_path_file = os.path.basename(save_path)
-        directory = os.path.join(self.work_dir, save_path_dir)
-        if directory and not os.path.exists(directory):
+        if save_path_dir:
+            directory = self.resolve_path(save_path_dir)
+        else:
+            directory = self.work_dir
+        file_path = self.resolve_path(os.path.join(directory, save_path_file))
+        if not os.path.exists(directory):
             self.logger.info(f"Creating directory {directory}")
             os.makedirs(directory)
         for block in blocks:
-            with open(os.path.join(directory, save_path_file), 'w') as f:
+            with open(file_path, 'w') as f:
                 f.write(block)
     
     def get_parameter_value(self, block: str, parameter_name: str) -> str:

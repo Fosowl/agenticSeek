@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import datetime
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add project root to Python path
 from sources.memory import Memory
@@ -84,10 +85,27 @@ class TestMemory(unittest.TestCase):
         self.memory.push("assistant", "Hi")
         self.memory.save_memory()
         
-        new_memory = Memory(self.system_prompt, recover_last_session=True)
+        new_memory = Memory(
+            self.system_prompt, recover_last_session=True, memory_compression=False
+        )
         new_memory.load_memory()
         self.assertEqual(len(new_memory.memory), 3)  # System + messages
         self.assertEqual(new_memory.memory[1]['content'], "Hello")
+
+    def test_recovered_memory_is_compressed_after_model_initialization(self):
+        self.memory.push("assistant", "Saved response. " * 100)
+        self.memory.save_memory()
+
+        # Keep the real download/restore/compress flow, but avoid network and inference.
+        with patch("sources.memory.AutoTokenizer.from_pretrained") as tokenizer_loader, \
+                patch("sources.memory.AutoModelForSeq2SeqLM.from_pretrained"):
+            tokenizer_loader.return_value.return_value = {"input_ids": [1, 2, 3]}
+            tokenizer_loader.return_value.decode.return_value = "Recovered summary"
+            restored = Memory(self.system_prompt, recover_last_session=True)
+
+        self.assertEqual(restored.memory[0]["content"], self.system_prompt)
+        self.assertEqual(restored.memory[1]["content"], "Recovered summary")
+        self.assertTrue(restored.session_recovered)
 
 if __name__ == '__main__':
     unittest.main()

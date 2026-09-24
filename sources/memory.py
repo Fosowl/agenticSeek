@@ -11,6 +11,7 @@ import configparser
 
 from sources.utility import timer_decorator, pretty_print, animate_thinking
 from sources.logger import Logger
+from sources.workspace import runtime_subdir
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -29,11 +30,8 @@ class Memory():
         self.logger = Logger("memory.log")
         self.session_time = datetime.datetime.now()
         self.session_id = str(uuid.uuid4())
-        self.conversation_folder = f"conversations/"
+        self.conversation_folder = runtime_subdir("conversations")
         self.session_recovered = False
-        if recover_last_session:
-            self.load_memory()
-            self.session_recovered = True
         # memory compression system
         self.model = None
         self.tokenizer = None
@@ -42,6 +40,9 @@ class Memory():
         self.model_provider = model_provider
         if self.memory_compression:
             self.download_model()
+        if recover_last_session:
+            self.load_memory()
+            self.session_recovered = True
 
     def get_ideal_ctx(self, model_name: str) -> int | None:
         """

@@ -27,8 +27,11 @@ class FileFinder(Tools):
             str: The content of the file
         """
         try:
-            with open(file_path, 'r') as file:
+            safe_path = self.resolve_path(file_path)
+            with open(safe_path, 'r') as file:
                 return file.read()
+        except PermissionError as e:
+            return f"Error reading file: {e}"
         except Exception as e:
             return f"Error reading file: {e}"
         
@@ -65,23 +68,26 @@ class FileFinder(Tools):
         Returns:
             str: A dictionary containing the file information
         """
-        if os.path.exists(file_path):
-            stats = os.stat(file_path)
-            permissions = oct(stat.S_IMODE(stats.st_mode))
-            file_type, _ = mimetypes.guess_type(file_path)
-            file_type = file_type if file_type else "Unknown"
-            content = self.read_arbitrary_file(file_path, file_type)
-            
-            result = {
-                "filename": os.path.basename(file_path),
-                "path": file_path,
-                "type": file_type,
-                "read": content,
-                "permissions": permissions
-            }
-            return result
-        else:
+        try:
+            safe_path = self.resolve_path(file_path)
+        except PermissionError as e:
+            return {"filename": file_path, "error": str(e)}
+        if not os.path.exists(safe_path):
             return {"filename": file_path, "error": "File not found"}
+        stats = os.stat(safe_path)
+        permissions = oct(stat.S_IMODE(stats.st_mode))
+        file_type, _ = mimetypes.guess_type(safe_path)
+        file_type = file_type if file_type else "Unknown"
+        content = self.read_arbitrary_file(safe_path, file_type)
+        
+        result = {
+            "filename": os.path.basename(safe_path),
+            "path": safe_path,
+            "type": file_type,
+            "read": content,
+            "permissions": permissions
+        }
+        return result
     
     def recursive_search(self, directory_path: str, filename: str) -> str:
         """
@@ -92,6 +98,10 @@ class FileFinder(Tools):
         Returns:
             str | None: The path to the file if found, None otherwise
         """
+        try:
+            directory_path = self.resolve_path(directory_path)
+        except PermissionError:
+            return None
         file_path = None
         excluded_files = [".pyc", ".o", ".so", ".a", ".lib", ".dll", ".dylib", ".so", ".git"]
         for root, dirs, files in os.walk(directory_path):

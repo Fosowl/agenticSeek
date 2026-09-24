@@ -3,9 +3,11 @@ from typing import List, Tuple, Type, Dict
 import datetime
 import logging
 
+from sources.workspace import runtime_subdir
+
 class Logger:
     def __init__(self, log_filename):
-        self.folder = '.logs'
+        self.folder = runtime_subdir("logs")
         self.create_folder(self.folder)
         self.log_path = os.path.join(self.folder, log_filename)
         self.enabled = True

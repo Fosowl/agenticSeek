@@ -81,13 +81,16 @@ services:
       # "0.0.0.0:${BACKEND_PORT}:${BACKEND_PORT}" and put it behind auth/a firewall.
       - 127.0.0.1:${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
     volumes:
-      - ./:/app
-      - ${WORK_DIR:-.}:/opt/workspace
-    # no command override: the image ENTRYPOINT starts Xvfb first, then the CMD
+      # Agent workspace: the only directory agents may read/write/execute in.
+      - ${WORK_DIR}:/opt/workspace
+      # Runtime data (logs, screenshots, sessions) — kept separate from app source.
+      - agent-runtime:/opt/agent-runtime
+    command: python3 api.py
     environment:
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
       - REDIS_URL=${REDIS_BASE_URL:-redis://redis:6379/0}
       - WORK_DIR=/opt/workspace
+      - AGENT_RUNTIME_DIR=/opt/agent-runtime
       - BACKEND_PORT=${BACKEND_PORT}
       # Bind 0.0.0.0 *inside* the container so the loopback-only published port
       # (see the "ports" mapping above) can reach it. The host only exposes the
@@ -111,6 +114,7 @@ services:
 volumes:
   redis-data:
   chrome_profiles:
+  agent-runtime:
 
 networks:
   agentic-seek-net:

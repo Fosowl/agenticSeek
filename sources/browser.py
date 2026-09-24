@@ -4,7 +4,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from typing import List, Tuple, Type, Dict
 from bs4 import BeautifulSoup
@@ -33,6 +33,7 @@ from sources.utility import pretty_print, animate_thinking
 from sources.logger import Logger
 from sources.browser_identity import BrowserIdentity, load_or_create_identity
 from sources.crx_utils import extract_crx, extension_installed
+from sources.workspace import runtime_subdir
 
 
 def get_chrome_path() -> str:
@@ -541,7 +542,7 @@ class Browser:
         self.js_scripts_folder = "./sources/web_scripts/" if not __name__ == "__main__" else "./web_scripts/"
         self.anticaptcha = "https://chrome.google.com/webstore/detail/nopecha-captcha-solver/dknlfmjaanfblgfdfebhijalfmhmjjjo/related"
         self.logger = Logger("browser.log")
-        self.screenshot_folder = os.path.join(os.getcwd(), ".screenshots")
+        self.screenshot_folder = runtime_subdir("screenshots")
         self.tabs = []
         try:
             self.driver = driver

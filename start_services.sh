@@ -10,6 +10,14 @@ if [ -z "$WORK_DIR" ]; then
     exit 1
 fi
 
+work_dir_real=$(cd "$WORK_DIR" 2>/dev/null && pwd -P)
+repo_real=$(pwd -P)
+if [ -n "$work_dir_real" ] && [ "$work_dir_real" = "$repo_real" ]; then
+    echo "Error: WORK_DIR must not be the AgenticSeek repository root."
+    echo "Set WORK_DIR to a separate folder for agent file access, e.g. ~/Documents/agenticseek_workspace"
+    exit 1
+fi
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
     dir_size_bytes=$(du -s -b "$WORK_DIR" 2>/dev/null | awk '{print $1}')
 else

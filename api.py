@@ -7,13 +7,14 @@ import configparser
 import asyncio
 import time
 from typing import List
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uuid
 
+from sources.api_auth import require_api_token
 from sources.llm_provider import Provider
 from sources.interaction import Interaction
 from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
@@ -21,6 +22,7 @@ from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
+from sources.workspace import runtime_subdir
 
 from dotenv import load_dotenv
 
@@ -67,9 +69,8 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
-if not os.path.exists(".screenshots"):
-    os.makedirs(".screenshots")
-api.mount("/screenshots", StaticFiles(directory=".screenshots"), name="screenshots")
+SCREENSHOTS_DIR = runtime_subdir("screenshots")
+api.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots")
 
 def initialize_system():
     stealth_mode = config.getboolean('BROWSER', 'stealth_mode')
@@ -148,7 +149,7 @@ query_resp_history = []
 @api.get("/screenshot")
 async def get_screenshot():
     logger.info("Screenshot endpoint called")
-    screenshot_path = ".screenshots/updated_screen.png"
+    screenshot_path = os.path.join(SCREENSHOTS_DIR, "updated_screen.png")
     if os.path.exists(screenshot_path):
         return FileResponse(screenshot_path)
     logger.error("No screenshot available")
@@ -220,7 +221,11 @@ async def think_wrapper(interaction, query):
         interaction.last_success = False
         raise e
 
-@api.post("/query", response_model=QueryResponse)
+@api.post(
+    "/query",
+    response_model=QueryResponse,
+    dependencies=[Depends(require_api_token)],
+)
 async def process_query(request: QueryRequest):
     global is_generating, query_resp_history
     logger.info(f"Processing query: {request.query}")

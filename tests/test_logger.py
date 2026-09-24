@@ -15,11 +15,11 @@ class TestLogger(unittest.TestCase):
         self.logger = Logger("test_logger.log")
 
     def tearDown(self):
-        if os.path.exists('.logs'):
+        if os.path.exists(self.logger.folder):
             for handler in self.logger.logger.handlers[:]:
                 handler.close()
                 self.logger.logger.removeHandler(handler)
-            log_path = os.path.join('.logs', 'test_logger.log')
+            log_path = os.path.join(self.logger.folder, 'test_logger.log')
             if os.path.exists(log_path):
                 os.remove(log_path)
 
@@ -27,7 +27,7 @@ class TestLogger(unittest.TestCase):
         """Test logger initializes correctly."""
         self.assertTrue(self.logger.enabled)
         self.assertIsNotNone(self.logger.logger)
-        self.assertTrue(os.path.exists('.logs'))
+        self.assertTrue(os.path.exists(self.logger.folder))
 
     def test_log_creates_file(self):
         """Test that logging creates a log file."""
@@ -84,7 +84,7 @@ class TestLogger(unittest.TestCase):
 
     def test_create_folder_already_exists(self):
         """Test folder creation when folder already exists."""
-        result = self.logger.create_folder('.logs')
+        result = self.logger.create_folder(self.logger.folder)
         self.assertTrue(result)
 
 
