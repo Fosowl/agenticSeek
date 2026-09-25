@@ -36,6 +36,9 @@ action=read
 name=toto.py
 ```
 
+When you are done with the task, simply say done:
+done
+
 This will return the content of the file toto.py.
 
 rules:

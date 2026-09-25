@@ -25,22 +25,24 @@ class FileAgent(Agent):
                         model_provider=provider.get_model_name())
     
     async def process(self, prompt, speech_module) -> str:
-        exec_success = False
         answer = ""
         reasoning = ""
         attempt = 0
         max_attempts = 5
         prompt += f"\nYou must work in directory: {self.work_dir}"
         self.memory.push('user', prompt)
-        while exec_success is False and attempt < max_attempts and not self.stop:
-            await self.wait_message(speech_module)
-            animate_thinking("Thinking...", color="status")
-            answer, reasoning = await self.llm_request()
-            self.last_reasoning = reasoning
-            exec_success, _ = self.execute_modules(answer)
-            answer = self.remove_blocks(answer)
-            self.last_answer = answer
-            attempt += 1
+        self.last_answer = ""
+        while not "done" in self.last_answer.lower() and not self.stop:
+            exec_success = False
+            while exec_success is False and attempt < max_attempts and not self.stop:
+                await self.wait_message(speech_module)
+                animate_thinking("Thinking...", color="status")
+                answer, reasoning = await self.llm_request()
+                self.last_reasoning = reasoning
+                exec_success, _ = self.execute_modules(answer)
+                answer = self.remove_blocks(answer)
+                self.last_answer = answer
+                attempt += 1
         self.status_message = "Ready"
         return answer, reasoning
 

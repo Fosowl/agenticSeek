@@ -12,6 +12,9 @@ config.ini
 experimental/
 chrome_bundle/
 .logs/
+.screenshots/*.png
+.screenshots/*.jpg
+.browser_profile/
 .screenshots/
 .agent-data/
 conversations/

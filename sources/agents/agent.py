@@ -139,6 +139,8 @@ class Agent():
         """
         Remove the reasoning block of reasoning model like deepseek.
         """
+        if text is None:
+            return ""
         end_tag = "</think>"
         end_idx = text.rfind(end_tag)
         if end_idx == -1:
