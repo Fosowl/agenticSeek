@@ -282,6 +282,8 @@ class Interaction:
             push_last_agent_memory = True
         tmp = self.last_answer
         self.current_agent = agent
+        # The stop flag must be reset before each new request. Otherwise, if /stop was used previously, every subsequent request will fail
+        agent.stop = False
         self.is_generating = True
         self.last_answer, self.last_reasoning = await agent.process(self.last_query, self.speech)
         self.is_generating = False
