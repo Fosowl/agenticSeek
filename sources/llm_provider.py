@@ -35,6 +35,7 @@ class Provider:
             "together": self.together_fn,
             "dsk_deepseek": self.dsk_deepseek,
             "openrouter": self.openrouter_fn,
+            "trustedrouter": self.trustedrouter_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
             "litellm": self.litellm_fn,
@@ -43,7 +44,7 @@ class Provider:
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "trustedrouter", "anthropic", "minimax"]
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
@@ -437,6 +438,33 @@ class Provider:
             return thought
         except Exception as e:
             raise Exception(f"OpenRouter API error: {str(e)}") from e
+
+    def trustedrouter_fn(self, history, verbose=False):
+        """
+        Use TrustedRouter API to generate text.
+
+        Model ids are namespaced (e.g. anthropic/claude-opus-4-7); a bare id is
+        rejected. Ids under trustedrouter/ are routing policies rather than single
+        models - each picks an upstream per request and fails over. trustedrouter/zdr
+        and trustedrouter/e2e restrict routing to providers that retain no data or
+        run confidential compute.
+        """
+        client = OpenAI(api_key=self.api_key, base_url="https://api.trustedrouter.com/v1")
+        if self.is_local:
+            raise Exception("TrustedRouter is not available for local use. Change config.ini")
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=history,
+            )
+            if response is None:
+                raise Exception("TrustedRouter response is empty.")
+            thought = response.choices[0].message.content
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"TrustedRouter API error: {str(e)}") from e
 
     def minimax_fn(self, history, verbose=False):
         """
