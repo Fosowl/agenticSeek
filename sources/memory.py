@@ -167,7 +167,7 @@ class Memory():
         if self.memory[curr_idx-1]['content'] == content:
             pretty_print("Warning: same message have been pushed twice to memory", color="error")
         time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if config["MAIN"]["provider_name"] == "openrouter":
+        if config["MAIN"]["provider_name"] in ("openrouter", "requesty"):
             self.memory.append({'role': role, 'content': content})
         else:
             self.memory.append({'role': role, 'content': content, 'time': time_str, 'model_used': self.model_provider})
