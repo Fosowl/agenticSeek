@@ -37,13 +37,14 @@ class Provider:
             "openrouter": self.openrouter_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
+            "atlascloud": self.atlascloud_fn,
             "litellm": self.litellm_fn,
             "test": self.test_fn
         }
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax", "atlascloud"]
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
@@ -499,6 +500,37 @@ class Provider:
             return thought
         except Exception as e:
             raise Exception(f"MiniMax API error: {str(e)}") from e
+
+    def atlascloud_fn(self, history, verbose=False):
+        """
+        Use Atlas Cloud through its OpenAI-compatible chat completions API.
+
+        Atlas Cloud is an aggregator: one key routes to many upstream vendors,
+        so ``model`` is the gateway's own ``vendor/model`` id, e.g.
+        ``deepseek-ai/deepseek-v3.2`` or ``openai/gpt-4.1-mini``.
+        ``GET https://api.atlascloud.ai/v1/models`` lists what is routable.
+        """
+        load_dotenv()
+        base_url = os.getenv("ATLASCLOUD_BASE_URL", "https://api.atlascloud.ai/v1")
+
+        if self.is_local:
+            raise Exception("Atlas Cloud is not available for local use. Change config.ini")
+        client = OpenAI(api_key=self.api_key, base_url=base_url)
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=history,
+            )
+            if response is None:
+                raise Exception("Atlas Cloud response is empty.")
+            thought = response.choices[0].message.content
+            if not thought:
+                raise Exception("Atlas Cloud response is empty.")
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"Atlas Cloud API error: {str(e)}") from e
 
     def dsk_deepseek(self, history, verbose=False):
         """

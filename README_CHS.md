@@ -240,6 +240,7 @@ provider_server_address = # 当 is_local = False 时，对于大多数 API 通�
 | TogetherAI   | `togetherAI`    | 否     | 通过 TogetherAI API 使用各种开源模型。| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
 | OpenRouter   | `openrouter`    | No     | 通过 OpenRouter 使用各种开源模型| [https://openrouter.ai/](https://openrouter.ai/) |
 | MiniMax      | `minimax`       | 否     | 使用 MiniMax 模型（如 MiniMax-M3、MiniMax-M2.7）。 | [platform.minimax.io](https://platform.minimax.io/user-center/basic-information) |
+| Atlas Cloud  | `atlascloud`    | 否     | 通过一个 OpenAI 兼容网关使用 100+ 开源与前沿模型（如 `deepseek-ai/deepseek-v3.2`）。 | [atlascloud.ai](https://www.atlascloud.ai/) |
 
 *注意：*
 *   我们不建议将 `gpt-4o` 或其他 OpenAI 模型用于复杂的网页浏览和任务规划，因为当前的提示优化针对 Deepseek 等模型。
