@@ -7,6 +7,7 @@ import shutil
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sources.tools.tools import Tools
+from sources.tools.BashInterpreter import BashInterpreter
 
 
 class _SafeModeTool(Tools):
@@ -50,6 +51,24 @@ class TestSafeMode(unittest.TestCase):
     def test_safe_mode_defaults_false_when_key_absent(self):
         self._write_config("")
         self.assertFalse(_SafeModeTool().safe_mode)
+
+    def test_safe_mode_configured_true_rejects_unsafe_bash_command(self):
+        """End-to-end: the safe_mode flag read from config.ini must reach the
+        BashInterpreter's unsafe-command check. Before the fix, safe_mode was
+        hardcoded False, so is_unsafe() never ran in the default bash path."""
+        self._write_config("safe_mode = True\n")
+        bash = BashInterpreter()
+        self.assertTrue(bash.safe_mode)
+        output = bash.execute(["rm -rf some_dir"])
+        self.assertIn("Unsafe command: rm -rf some_dir", output)
+
+    def test_safe_mode_configured_true_aborts_whole_batch(self):
+        self._write_config("safe_mode = True\n")
+        bash = BashInterpreter()
+        marker = os.path.join(self._dir, "should_not_exist.txt")
+        output = bash.execute([f"touch {marker}", "rm -rf some_dir"])
+        self.assertIn("rm -rf some_dir", output)
+        self.assertFalse(os.path.exists(marker))
 
 
 if __name__ == "__main__":
