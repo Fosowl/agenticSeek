@@ -39,7 +39,7 @@ def is_running_in_docker():
     try:
         with open('/proc/1/cgroup', 'r') as f:
             return 'docker' in f.read()
-    except:
+    except Exception:
         pass
 
     return False
