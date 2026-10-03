@@ -701,4 +701,4 @@ AgenticSeek'in yeteneklerini uçuş arama, seyahat planlama veya en iyi alışve
 
  > [tcsenpai](https://github.com/tcsenpai) ve [plitc](https://github.com/plitc) Backend dockerizasyonuna yardımları için
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Fosowl/agenticSeek&type=Date)](https://star-history.dera.page/#Fosowl/agenticSeek&Date)

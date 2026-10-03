@@ -691,4 +691,4 @@ Consultez [Contributing.md](./docs/CONTRIBUTING.md) pour apprendre comment inté
 
  > [tcsenpai](https://github.com/tcsenpai) et [plitc](https://github.com/plitc) pour avoir aidé à la dockerisation du backend
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Fosowl/agenticSeek&type=Date)](https://star-history.dera.page/#Fosowl/agenticSeek&Date)
