@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import datetime
+import tempfile
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add project root to Python path
@@ -10,21 +11,17 @@ from sources.memory import Memory
 
 class TestMemory(unittest.TestCase):
     def setUp(self):
+        runtime_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(runtime_dir.cleanup)
+        runtime_env = patch.dict(os.environ, {"AGENT_RUNTIME_DIR": runtime_dir.name})
+        runtime_env.start()
+        self.addCleanup(runtime_env.stop)
         self.system_prompt = "Test system prompt"
         self.memory = Memory(
             system_prompt=self.system_prompt,
             recover_last_session=False,
             memory_compression=False
         )
-
-    def tearDown(self):
-        if os.path.exists("conversations"):
-            for root, dirs, files in os.walk("conversations", topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                for name in dirs:
-                    os.rmdir(os.path.join(root, name))
-            os.rmdir("conversations")
 
     def test_initialization(self):
         self.assertEqual(len(self.memory.memory), 1)
@@ -45,6 +42,45 @@ class TestMemory(unittest.TestCase):
         self.assertTrue(os.path.exists(save_path))
         filename = self.memory.get_filename()
         self.assertTrue(os.path.exists(os.path.join(save_path, filename)))
+
+    def test_find_last_session_path_uses_full_timestamp(self):
+        morning = "memory_2026-10-13_08-00-00.txt"
+        evening = "memory_2026-10-13_20-00-00.txt"
+        previous_day = "memory_2026-10-12_23-59-59.txt"
+        for filenames in ([morning, evening, previous_day],
+                          [evening, morning, previous_day]):
+            with self.subTest(filenames=filenames), \
+                    patch("sources.memory.os.listdir", return_value=filenames):
+                self.assertEqual(
+                    self.memory.find_last_session_path(self.memory.conversation_folder),
+                    evening
+                )
+
+    def test_find_last_session_path_empty_directory(self):
+        self.assertIsNone(
+            self.memory.find_last_session_path(self.memory.conversation_folder)
+        )
+
+    def test_load_memory_recovers_latest_same_day_session(self):
+        save_path = os.path.join(self.memory.conversation_folder, "casual_agent")
+        os.makedirs(save_path)
+        morning = "memory_2026-10-13_08-00-00.txt"
+        evening = "memory_2026-10-13_20-00-00.txt"
+        for filename, content in ((morning, "Morning response"),
+                                  (evening, "Evening response")):
+            transcript = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "assistant", "content": content},
+            ]
+            with open(os.path.join(save_path, filename), "w") as session:
+                json.dump(transcript, session)
+
+        with patch("sources.memory.os.listdir", return_value=[morning, evening]):
+            self.memory.load_memory()
+
+        self.assertEqual(self.memory.get(), transcript)
+        self.assertTrue(os.path.isfile(os.path.join(save_path, morning)))
+        self.assertTrue(os.path.isfile(os.path.join(save_path, evening)))
 
     def test_push(self):
         index = self.memory.push("user", "Hello")

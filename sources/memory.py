@@ -98,8 +98,8 @@ class Memory():
         saved_sessions = []
         for filename in os.listdir(path):
             if filename.startswith('memory_'):
-                date = filename.split('_')[1]
-                saved_sessions.append((filename, date))
+                timestamp = filename[len('memory_'):].removesuffix('.txt')
+                saved_sessions.append((filename, timestamp))
         saved_sessions.sort(key=lambda x: x[1], reverse=True)
         if len(saved_sessions) > 0:
             self.logger.info(f"Last session found at {saved_sessions[0][0]}")
