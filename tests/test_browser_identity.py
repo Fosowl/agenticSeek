@@ -9,7 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sources.browser_identity import (
-    BrowserIdentity, DEVICE_PROFILES, load_or_create_identity, locale_for,
+    BrowserIdentity, DEVICE_PROFILES, chrome_brands, load_or_create_identity, locale_for,
 )
 
 
@@ -27,7 +27,6 @@ class TestBrowserIdentity(unittest.TestCase):
         first = load_or_create_identity(state_file=self.state, chrome_major=137, lang="en")
         second = load_or_create_identity(state_file=self.state, chrome_major=137, lang="en")
         self.assertEqual(first.label, second.label)
-        self.assertEqual(first.seed, second.seed)
         with open(self.state) as f:
             stored = json.load(f)
         self.assertEqual(stored["label"], first.label)
@@ -53,7 +52,7 @@ class TestBrowserIdentity(unittest.TestCase):
 
     def test_ua_matches_platform_and_version(self):
         for profile in DEVICE_PROFILES:
-            ident = BrowserIdentity(profile, 137, "137.0.7151.68", ["en-US", "en"], None, 42)
+            ident = BrowserIdentity(profile, 137, "137.0.7151.68", ["en-US", "en"], None)
             ua = ident.user_agent
             self.assertIn(f"Chrome/137.0.0.0", ua)
             token = {"windows": "Windows NT", "macos": "Macintosh", "linux": "X11"}[profile["os"]]
@@ -62,33 +61,45 @@ class TestBrowserIdentity(unittest.TestCase):
 
     def test_window_size_fits_screen(self):
         for profile in DEVICE_PROFILES:
-            ident = BrowserIdentity(profile, 137, "137.0.7151.68", ["en-US", "en"], None, 42)
+            ident = BrowserIdentity(profile, 137, "137.0.7151.68", ["en-US", "en"], None)
             w, h = ident.window_size
             self.assertLessEqual(w, profile["screen"]["width"])
             self.assertLessEqual(h, profile["screen"]["avail_height"])
 
     def test_cdp_metadata_consistent(self):
         for profile in DEVICE_PROFILES:
-            ident = BrowserIdentity(profile, 137, "137.0.7151.68", ["en-US", "en"], None, 42)
+            ident = BrowserIdentity(profile, 137, "137.0.7151.68", ["en-US", "en"], None)
             meta = ident.to_cdp_user_agent_metadata()
             self.assertEqual(meta["platform"], profile["client_hint_platform"])
             self.assertEqual(meta["platformVersion"], profile["platform_version"])
             self.assertFalse(meta["mobile"])
+            self.assertEqual(meta["bitness"], "64")  # real 64-bit desktop Chrome, Apple Silicon too
             versions = {b["version"] for b in meta["brands"]}
             self.assertIn("137", versions)
 
-    def test_js_payload_shape(self):
+    def test_brands_match_real_chrome(self):
+        # sec-ch-ua lists captured from real Chrome releases
+        real = {
+            120: [("Not_A Brand", "8"), ("Chromium", "120"), ("Google Chrome", "120")],
+            124: [("Chromium", "124"), ("Google Chrome", "124"), ("Not-A.Brand", "99")],
+            131: [("Google Chrome", "131"), ("Chromium", "131"), ("Not_A Brand", "24")],
+            156: [("Not:A-Brand", "8"), ("Chromium", "156"), ("Google Chrome", "156")],
+        }
+        for major, expected in real.items():
+            brands = chrome_brands(major, str(major))
+            self.assertEqual([(b["brand"], b["version"]) for b in brands], expected)
+
+    def test_full_version_list_grease_is_dotted(self):
+        full = chrome_brands(156, "156.0.8078.12", full=True)
+        self.assertEqual(full[0], {"brand": "Not:A-Brand", "version": "8.0.0.0"})
+        self.assertEqual(full[1], {"brand": "Chromium", "version": "156.0.8078.12"})
+
+    def test_js_payload_matches_script_contract(self):
         ident = load_or_create_identity(state_file=self.state, chrome_major=137, lang="en")
         js = ident.to_js()
-        for key in ("navigator", "screen", "webgl", "seed"):
-            self.assertIn(key, js)
-        for key in ("platform", "vendor", "languages", "hardwareConcurrency",
-                    "deviceMemory", "userAgentData"):
-            self.assertIn(key, js["navigator"])
-        # every WebGL enum the spoof intercepts must be provided
-        for key in ("vendor", "renderer", "unmasked_vendor", "unmasked_renderer",
-                    "version", "shading_language_version"):
-            self.assertIn(key, js["webgl"])
+        self.assertEqual(js["navigator"]["languages"], ident.languages)
+        for key in ("width", "height", "avail_width", "avail_height", "avail_left", "avail_top"):
+            self.assertIn(key, js["screen"])
 
     def test_persona_matches_host_os(self):
         import sources.browser_identity as bi
@@ -113,7 +124,7 @@ class TestBrowserIdentity(unittest.TestCase):
         ident = load_or_create_identity(state_file=self.state, chrome_major=137, lang="en")
         restored = BrowserIdentity.from_state(json.loads(json.dumps(ident.to_state())))
         self.assertEqual(restored.label, ident.label)
-        self.assertEqual(restored.seed, ident.seed)
+        self.assertEqual(restored.chrome_full_version, ident.chrome_full_version)
         self.assertEqual(restored.navigator_platform, ident.navigator_platform)
 
 
