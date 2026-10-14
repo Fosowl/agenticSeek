@@ -10,6 +10,7 @@ from sources.interaction import Interaction
 from sources.agents import Agent, CoderAgent, CasualAgent, FileAgent, PlannerAgent, BrowserAgent, McpAgent
 from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
+from sources.browser_session_import import import_sessions_if_configured
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -28,6 +29,7 @@ async def main():
                         server_address=config["MAIN"]["provider_server_address"],
                         is_local=config.getboolean('MAIN', 'is_local'))
 
+    import_sessions_if_configured(config, headless=config.getboolean('BROWSER', 'headless_browser'))
     browser = Browser(
         create_driver(headless=config.getboolean('BROWSER', 'headless_browser'), stealth_mode=stealth_mode, lang=languages[0]),
         anticaptcha_manual_install=stealth_mode

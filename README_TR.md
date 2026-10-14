@@ -167,6 +167,8 @@ languages = en zh # Dil listesi, metinden sese varsayılan olarak listedeki ilk 
 [BROWSER]
 headless_browser = True # CLI modunda değilseniz değiştirmeyin.
 stealth_mode = True # Tarayıcı algılamasını azaltmak için gizli selenium kullanır
+import_user_profile = False # True: kendi tarayıcınızdaki oturumları ajan tarayıcısına kopyalar (önce o tarayıcıyı kapatın)
+import_profile_name = Default # içe aktarılacak tarayıcı profil klasörü
 ```
 
 **Uyarı**:
@@ -482,6 +484,18 @@ stealth_mode = False
 *   **`[BROWSER]` Bölümü:**
     *   `headless_browser`: Otomatik tarayıcıyı görünür pencere olmadan çalıştırmak için `True` (web arayüzü veya etkileşimsiz kullanım için önerilir). Tarayıcı penceresini göstermek için `False` (CLI modu veya hata ayıklama için kullanışlıdır).
     *   `stealth_mode`: Tarayıcı otomasyonunun tespit edilmesini zorlaştıran önlemleri etkinleştirmek için `True`. Anticaptcha gibi tarayıcı eklentilerinin manuel olarak yüklenmesini gerektirebilir.
+
+    *   **`import_user_profile`**: `True` ise bir sonraki başlatmada kendi tarayıcınızdaki oturumları (çerezler, localStorage, IndexedDB) ajan tarayıcısına kopyalar; ajan, oturum açtığınız sitelerde oturum açmış olur. İçe aktarım sırasında o tarayıcı tamamen kapatılmış olmalı ve ajan aynı tarayıcı ikilisini (binary) kullanmalıdır. Günlük tarayıcınız Google Chrome değilse `CHROME_EXECUTABLE_PATH` ve `CHROME_USER_DATA_DIR` değerlerini ona yönlendirin (Brave örneği: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`, `CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`). Varsayılan `False`: bu, kimlik doğrulamış oturumlarınızı (e-posta, banka) ajana teslim eder. `.browser_profile/` gitignore'dadır; gizli tutun.
+    *   **`import_profile_name`**: birden fazla profil klasörünüz varsa içe aktarılacak olan (`chrome://version` adı gösterir). Varsayılan `Default`.
+
+**Oturum içe aktarımı notları**:
+
+- Yalnızca ana makine: içe aktarım gerçek tarayıcı verinizi gerektirir; CLI modunda veya ana makinedeki `api.py` ile çalışır. agenticSeek'i Docker ile (`./start_services.sh full`) çalıştırıyorsanız `import_user_profile = False` bırakın.
+- İçe aktarım profil başına bir kez çalışır; `.browser_profile/session_import.json` işareti tekrarları engeller, `import_profile_name` değiştirmek bir sonraki başlatmada yeni içe aktarım başlatır. Elle yeniden çalıştırmak için: `uv run python -m sources.browser_session_import "<profil-adı>"` (önce shell'de iki `CHROME_*` değişkenini export edin; bu komut `config.ini` dosyasını okumaz).
+- Yeni içe aktarımdan sonra bir kez `headless_browser = False` ile başlatın: macOS anahtar zinciri onayı ve "yeni cihaz" kontrolleri görünür pencere ister.
+- Önceki ajan profiliniz `.browser_profile/chrome_data.bak-<tarih>` konumunda tutulur; yedekler asla otomatik silinmez.
+- Kopya; kayıtlı şifreleri (`Login Data`), otomatik doldurma verilerini (`Web Data`) ve çerezleri içerir; bu yüzden ajan bu sitelerde sizin adınıza hareket edebilir. `is_local = False` iken okuduğu sayfa içeriği de bulut model sağlayıcınıza gönderilir.
+- Passkey'ler asla aktarılmaz; bazı katı siteler (bazı bankalar) ajan tarayıcısında yeniden giriş isteyebilir. Kendi tarayıcınızın artık çözemeyeceği oturumlar da aktarılmaz.
 
 Bu bölüm desteklenen LLM sağlayıcı türlerini özetler. `config.ini` dosyasında yapılandırın.
 

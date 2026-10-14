@@ -159,6 +159,8 @@ languages = en zh # 語言列表，文本轉語音將默認使用列表中的第
 [BROWSER]
 headless_browser = True # 除非在主機上使用 CLI，否則保持不變。
 stealth_mode = True # 使用不可檢測的 selenium 減少瀏覽器檢測
+import_user_profile = False # True：把你本人瀏覽器的登入狀態複製到代理瀏覽器（匯入前請完全退出該瀏覽器）
+import_profile_name = Default # 要匯入的瀏覽器設定檔目錄名
 ```
 
 **警告**：
@@ -474,6 +476,18 @@ stealth_mode = False
 *   **`[BROWSER]` 部分：**
     *   `headless_browser`: `True` 在沒有可見窗口的情況下運行自動化瀏覽器（推薦用於 Web 界面或非交互式使用）。`False` 顯示瀏覽器窗口（對於 CLI 模式或調試有用）。
     *   `stealth_mode`: `True` 啟用使瀏覽器自動化更難檢測的措施。可能需要手動安裝瀏覽器擴展，如 anticaptcha。
+
+    *   **`import_user_profile`**：`True` 表示在下次啟動時，把你本人瀏覽器的登入狀態（cookie、localStorage、IndexedDB）複製到代理瀏覽器，使代理在已登入的網站上保持登入。匯入時該瀏覽器必須完全退出，且代理須執行同款瀏覽器核心。若日常瀏覽器不是 Google Chrome，請將 `CHROME_EXECUTABLE_PATH` 和 `CHROME_USER_DATA_DIR` 同時指向它（Brave 範例：`CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`、`CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`）。預設 `False`：此選項會把你的已登入工作階段（信箱、銀行等）交給代理。`.browser_profile/` 已被 gitignore，請視為機密。
+    *   **`import_profile_name`**：你有多個瀏覽器設定檔目錄時，指定要匯入哪個（`chrome://version` 會顯示目錄名）。預設 `Default`。
+
+**工作階段匯入說明**：
+
+- 僅限主機：匯入需要你真實的瀏覽器資料，適用於 CLI 模式或主機上的 `api.py`。使用 Docker（`./start_services.sh full`）執行時請保持 `import_user_profile = False`。
+- 匯入按設定檔目錄只執行一次；`.browser_profile/session_import.json` 標記會阻止重複匯入；修改 `import_profile_name` 後下次啟動會重新匯入。手動重新匯入：`uv run python -m sources.browser_session_import "<設定檔目錄名>"`（請先在 shell 中 export 兩個 `CHROME_*` 變數；此命令不讀取 `config.ini`）。
+- 匯入後請先以 `headless_browser = False` 啟動一次：macOS 鑰匙圈確認和「新裝置」驗證需要可見視窗。
+- 原代理瀏覽器設定檔會保留在 `.browser_profile/chrome_data.bak-<日期>`；備份不會被自動刪除。
+- 複製內容包含已儲存的密碼（`Login Data`）、自動填寫資料（`Web Data`）和 cookie，代理可以以你的身分在這些網站上操作。當 `is_local = False` 時，代理讀取的頁面內容也會傳送給你的雲端模型提供商。
+- 通行金鑰（passkey）無法遷移；少數嚴格網站（如部分銀行）可能要求在代理瀏覽器中重新登入一次。你本人瀏覽器已無法解密的舊工作階段同樣不會遷移。
 
 本節總結了支持的 LLM 提供商類型。在 `config.ini` 中配置它們。
 

@@ -159,6 +159,8 @@ languages = en zh # 言語リスト、TTSはデフォルトでリストの最初
 [BROWSER]
 headless_browser = True # ホストでCLIを使用する場合を除き変更しない
 stealth_mode = True # 検出されにくいseleniumを使用してブラウザ検出を減らす
+import_user_profile = False # True: 自分のブラウザのログイン状態をエージェントのブラウザへ複製（先にそのブラウザを完全に終了）
+import_profile_name = Default # インポートするブラウザのプロファイル名
 ```
 
 **警告**:
@@ -474,6 +476,18 @@ stealth_mode = False
 *   **`[BROWSER]`セクション：**
     *   `headless_browser`: `True`は可視ウィンドウなしで自動化ブラウザを実行（Webインターフェースまたは非対話的使用に推奨）。`False`はブラウザウィンドウを表示（CLIモードまたはデバッグに有用）。
     *   `stealth_mode`: `True`はブラウザ自動化の検出を困難にする措置を有効にします。anticaptchaなどのブラウザ拡張機能の手動インストールが必要な場合があります。
+
+    *   **`import_user_profile`**: `True` にすると、次回起動時に自分のブラウザのログイン状態（cookie、localStorage、IndexedDB）をエージェントのブラウザへ複製し、エージェントがログイン済みサイトにそのままログインします。インポート中はそのブラウザを完全に終了し、エージェントは同じブラウザバイナリで動かす必要があります。日常ブラウザが Google Chrome でない場合は `CHROME_EXECUTABLE_PATH` と `CHROME_USER_DATA_DIR` の両方を指定してください（Brave の例: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`、`CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`）。既定 `False`: 有効にするとエージェントに認証済みセッション（メール、銀行）を渡します。`.browser_profile/` は gitignore 済みです。秘密として扱ってください。
+    *   **`import_profile_name`**: 複数のプロファイルがある場合にインポートするもの（`chrome://version` で名前を確認）。既定 `Default`。
+
+**セッションインポートの注意**:
+
+- ホストのみ：インポートは実際のブラウザデータを必要とするため、CLI モードまたはホスト上の `api.py` で動作します。Docker（`./start_services.sh full`）で実行する場合は `import_user_profile = False` のままにしてください。
+- インポートはプロファイルごとに一度だけ実行されます。`.browser_profile/session_import.json` のマーカーが再実行を防ぎ、`import_profile_name` を変更すると次回起動時に再インポートされます。手動で再実行するには: `uv run python -m sources.browser_session_import "<プロファイル名>"`（事前に shell で 2 つの `CHROME_*` 変数を export してください。このコマンドは `config.ini` を読みません）。
+- インポート直後は一度 `headless_browser = False` で起動してください。macOS のキーチェーン確認と「新しい端末」チェックには可視ウィンドウが必要です。
+- 以前のエージェントプロファイルは `.browser_profile/chrome_data.bak-<日付>` に保持されます。バックアップが自動削除されることはありません。
+- コピーには保存済みパスワード（`Login Data`）、自動入力データ（`Web Data`）、cookie が含まれ、エージェントはこれらのサイトであなたとして行動できます。`is_local = False` の場合、エージェントが読み取ったページ内容もクラウドモデルプロバイダーに送信されます。
+- パスキーは移行できません。厳格なサイト（一部の銀行など）ではエージェントのブラウザで再ログインを求められることがあります。元のブラウザ自身が復号できない古いセッションも移行されません。
 
 このセクションはサポートされているLLMプロバイダータイプをまとめています。`config.ini`で設定します。
 

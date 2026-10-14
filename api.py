@@ -20,6 +20,7 @@ from sources.interaction import Interaction
 from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
 from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
+from sources.browser_session_import import import_sessions_if_configured
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
 from sources.workspace import runtime_subdir
@@ -97,6 +98,8 @@ def initialize_system():
     )
     logger.info(f"Provider initialized: {provider.provider_name} ({provider.model})")
 
+    if not is_running_in_docker():  # no host browser data inside the container
+        import_sessions_if_configured(config, headless=headless)
     browser = Browser(
         create_driver(headless=headless, stealth_mode=stealth_mode, lang=languages[0]),
         anticaptcha_manual_install=stealth_mode

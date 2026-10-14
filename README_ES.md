@@ -159,6 +159,8 @@ languages = en zh # Lista de idiomas, TTS usará el primero de la lista por defe
 [BROWSER]
 headless_browser = True # mantener sin cambios a menos que uses CLI en el host.
 stealth_mode = True # Usa selenium indetectable para reducir la detección del navegador
+import_user_profile = False # True: copia los inicios de sesión de tu navegador al navegador del agente (cierra ese navegador antes)
+import_profile_name = Default # carpeta de perfil del navegador a importar
 ```
 
 **Advertencia**:
@@ -473,6 +475,18 @@ stealth_mode = False
 *   **Sección `[BROWSER]`:**
     *   `headless_browser`: `True` para ejecutar el navegador automatizado sin una ventana visible (recomendado para interfaz web o uso no interactivo). `False` para mostrar la ventana del navegador (útil para modo CLI o depuración).
     *   `stealth_mode`: `True` para habilitar medidas que dificultan la detección de la automatización del navegador. Puede requerir la instalación manual de extensiones del navegador como anticaptcha.
+
+    *   **`import_user_profile`**: `True` para copiar las sesiones iniciadas (cookies, localStorage, IndexedDB) de tu propio navegador al navegador del agente en el siguiente inicio, de modo que el agente quede conectado donde tú lo estás. Ese navegador debe estar totalmente cerrado durante la importación, y el agente debe usar el mismo binario del navegador. Si tu navegador habitual no es Google Chrome, apunta `CHROME_EXECUTABLE_PATH` y `CHROME_USER_DATA_DIR` a él (para Brave: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`, `CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`). Por defecto `False`: esto entrega al agente tus sesiones autenticadas (correo, banco). `.browser_profile/` está en gitignore; trátalo como un secreto.
+    *   **`import_profile_name`**: carpeta de perfil del navegador a importar cuando tienes más de una (`chrome://version` muestra el nombre). Por defecto `Default`.
+
+**Notas sobre la importación de sesiones**:
+
+- Solo en el host: la importación necesita los datos reales de tu navegador, así que funciona en modo CLI o con `api.py` en el host. Mantén `import_user_profile = False` si ejecutas agenticSeek con Docker (`./start_services.sh full`).
+- La importación se ejecuta una vez por perfil; el marcador `.browser_profile/session_import.json` bloquea repeticiones, y cambiar `import_profile_name` inicia una nueva importación en el siguiente arranque. Para rehacerla a mano: `uv run python -m sources.browser_session_import "<nombre-del-perfil>"` (exporta antes las dos variables `CHROME_*` en el shell; este comando no lee `config.ini`).
+- Tras una importación nueva, inicia una vez con `headless_browser = False`: el consentimiento del llavero de macOS y las comprobaciones de "nuevo dispositivo" necesitan una ventana visible.
+- Tu perfil de agente anterior se conserva en `.browser_profile/chrome_data.bak-<fecha>`; las copias nunca se borran automáticamente.
+- La copia incluye contraseñas guardadas (`Login Data`), datos de autocompletado (`Web Data`) y cookies, por lo que el agente puede actuar como tú en esos sitios. Con `is_local = False`, el contenido de las páginas que lea también se envía a tu proveedor de modelos en la nube.
+- Las passkeys nunca se transfieren; algunos sitios estrictos (ciertos bancos) pueden pedir un nuevo inicio de sesión dentro del navegador del agente. Las sesiones que tu propio navegador ya no puede descifrar tampoco se transfieren.
 
 Esta sección resume los tipos de proveedores de LLM admitidos. Configúralos en `config.ini`.
 
