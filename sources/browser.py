@@ -68,15 +68,14 @@ def get_chrome_path() -> str:
                  "/opt/google/chrome/chrome-headless-shell",
                  #"/app/chrome_bundle/chrome136/chrome-linux64"
                 ]
-
+    chrome_path_env = _chrome_override_path()
+    if chrome_path_env:
+        return chrome_path_env
     for path in paths:
         if os.path.exists(path) and os.access(path, os.X_OK):
             return path
     print("Looking for Google Chrome in these locations failed:")
     print('\n'.join(paths))
-    chrome_path_env = os.environ.get("CHROME_EXECUTABLE_PATH")
-    if chrome_path_env and os.path.exists(chrome_path_env) and os.access(chrome_path_env, os.X_OK):
-        return chrome_path_env
     if not sys.stdin or not sys.stdin.isatty():
         # containers/CI: no interactive prompt possible, fail loudly instead
         # of hanging or crashing with an EOFError traceback
@@ -99,10 +98,62 @@ def get_chromedriver_version(chromedriver_path: str) -> str:
     except Exception:
         return ""
 
+def _chrome_override_path():
+    """The CHROME_EXECUTABLE_PATH override when it is a usable binary, else None."""
+    override = os.environ.get("CHROME_EXECUTABLE_PATH")
+    if override and os.path.exists(override) and os.access(override, os.X_OK):
+        return override
+    return None
+
+
+def _version_from_text(text: str) -> str:
+    """First version-like token ("digits.digits...") of a --version output."""
+    for token in text.split():
+        if token[0].isdigit() and "." in token:
+            return token
+    return ""
+
+
+def _windows_browser_version(binary_path: str) -> str:
+    """Version of a Windows browser read from version dirs beside its binary."""
+    # chrome.exe --version prints nothing on Windows; the auto-installer reads
+    # the numbered dirs next to the binary instead (e.g. .../Application/120.0.x).
+    for parent in (os.path.dirname(binary_path), os.path.dirname(os.path.dirname(binary_path))):
+        try:
+            numbered = [name for name in os.listdir(parent)
+                        if name[0].isdigit() and "." in name]
+        except OSError:
+            continue
+        if numbered:
+            return sorted(numbered)[-1]
+    return ""
+
+
+def get_browser_version() -> str:
+    """Version of the browser that will actually run: the CHROME_EXECUTABLE_PATH
+    override when set, else the system-detected Chrome. Empty string when unknown."""
+    override = _chrome_override_path()
+    if override:
+        try:
+            result = subprocess.run([override, "--version"], capture_output=True, text=True, timeout=10)
+            # "Brave Browser 155.0.8059.40"; Debian adds "built on Debian 12.4".
+            version = _version_from_text(result.stdout or "")
+            if version:
+                return version
+            if sys.platform.startswith("win"):
+                return _windows_browser_version(override)
+            return ""
+        except Exception:
+            return ""
+    try:
+        return chromedriver_autoinstaller.get_chrome_version()
+    except Exception:
+        return ""
+
 def is_chromedriver_compatible(chromedriver_path: str) -> bool:
     """Check if a chromedriver binary is compatible with the installed Chrome version."""
     try:
-        chrome_version = chromedriver_autoinstaller.get_chrome_version()
+        chrome_version = get_browser_version()
         if not chrome_version:
             return True  # Can't determine Chrome version, assume compatible
         chrome_major = chrome_version.split('.')[0]
@@ -140,10 +191,22 @@ def install_chromedriver() -> str:
             print(f"Using Docker ChromeDriver at {docker_chromedriver_path}")
             return docker_chromedriver_path
     
-    # Auto-install matching ChromeDriver version
+    # Auto-install matching ChromeDriver version. When the browser comes from
+    # CHROME_EXECUTABLE_PATH, pin the auto-installer to that binary's version.
     try:
         print("Installing matching ChromeDriver version automatically...")
-        chromedriver_path = chromedriver_autoinstaller.install()
+        override = _chrome_override_path()
+        pinned_version = get_browser_version() if override else ""
+        if override and pinned_version:
+            from chromedriver_autoinstaller import utils as cd_utils
+            original_detector = cd_utils.get_chrome_version
+            cd_utils.get_chrome_version = lambda: pinned_version
+            try:
+                chromedriver_path = chromedriver_autoinstaller.install()
+            finally:
+                cd_utils.get_chrome_version = original_detector
+        else:
+            chromedriver_path = chromedriver_autoinstaller.install()
     except Exception as e:
         raise AgenticSeekError(
             "ChromeDriver missing",
