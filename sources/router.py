@@ -1,5 +1,8 @@
 import os
 import sys
+# The router's tokenizers run before agenticSeek forks subprocesses; disable their
+# thread pool up front instead of letting them print a fork warning mid-answer.
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 import torch
 import random
 from typing import List, Tuple, Type, Dict
@@ -14,6 +17,7 @@ from sources.agents.planner_agent import FileAgent
 from sources.agents.browser_agent import BrowserAgent
 from sources.language import LanguageUtility
 from sources.utility import pretty_print, animate_thinking, timer_decorator
+from sources.errors import AgenticSeekError
 from sources.logger import Logger
 
 class AgentRouter:
@@ -55,7 +59,13 @@ class AgentRouter:
             animate_thinking("Loading LLM router model...", color="status")
             talk_classifier = AdaptiveClassifier.from_pretrained(path)
         except Exception as e:
-            raise Exception("Failed to load the routing model. Please run the dl_safetensors.sh script inside llm_router/ directory to download the model.")
+            raise AgenticSeekError(
+                "Routing model missing",
+                f"Could not load the agent routing model from {os.path.abspath(path)}: {e}",
+                causes=["The model weights were never downloaded (they are not stored in git).",
+                        "agenticSeek was started from another directory than the project root."],
+                fixes=["Download them: cd llm_router && ./dl_safetensors.sh",
+                       "Start agenticSeek from the project root directory."]) from e
         return talk_classifier
 
     def get_device(self) -> str:

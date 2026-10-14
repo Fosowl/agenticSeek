@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sources.llm_provider import Provider
+from sources.errors import ProviderError
 
 
 class TestMiniMaxProvider(unittest.TestCase):
@@ -37,9 +38,9 @@ class TestMiniMaxProvider(unittest.TestCase):
         provider = Provider("minimax", "MiniMax-M3", is_local=True)
         provider.api_key = 'test-key'
         history = [{"role": "user", "content": "Hello"}]
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ProviderError) as context:
             provider.minimax_fn(history)
-        self.assertIn("not available for local use", str(context.exception))
+        self.assertEqual(context.exception.kind, "local_unsupported")
 
     @patch('sources.llm_provider.OpenAI')
     @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-key'})
@@ -174,14 +175,14 @@ class TestMiniMaxProvider(unittest.TestCase):
             provider = Provider("minimax", "MiniMax-M3", is_local=False)
             history = [{"role": "user", "content": "Hello"}]
 
-            with self.assertRaises(Exception) as context:
+            with self.assertRaises(ProviderError) as context:
                 provider.minimax_fn(history)
-            self.assertIn("response is empty", str(context.exception))
+            self.assertEqual(context.exception.kind, "empty_response")
 
     @patch('sources.llm_provider.OpenAI')
     @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-key'})
-    def test_minimax_handles_api_error(self, mock_openai_class):
-        """Test that minimax provider handles API errors."""
+    def test_minimax_respond_explains_api_error(self, mock_openai_class):
+        """respond() turns a raw MiniMax failure into a diagnosed ProviderError."""
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
         mock_client.chat.completions.create.side_effect = Exception("API rate limit exceeded")
@@ -190,9 +191,9 @@ class TestMiniMaxProvider(unittest.TestCase):
             provider = Provider("minimax", "MiniMax-M3", is_local=False)
             history = [{"role": "user", "content": "Hello"}]
 
-            with self.assertRaises(Exception) as context:
-                provider.minimax_fn(history)
-            self.assertIn("MiniMax API error", str(context.exception))
+            with self.assertRaises(ProviderError) as context:
+                provider.respond(history)
+            self.assertEqual(context.exception.kind, "rate_limit")
 
 
 class TestMiniMaxProviderModels(unittest.TestCase):

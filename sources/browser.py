@@ -30,10 +30,20 @@ import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sources.utility import pretty_print, animate_thinking
+from sources.errors import AgenticSeekError
 from sources.logger import Logger
 from sources.browser_identity import BrowserIdentity, load_or_create_identity
 from sources.crx_utils import extract_crx, extension_installed
 from sources.workspace import runtime_subdir
+
+
+def chrome_not_found_error() -> AgenticSeekError:
+    return AgenticSeekError(
+        "Google Chrome not found",
+        "The web agent needs Google Chrome, but no Chrome executable was found.",
+        causes=["Chrome is not installed, or installed in a non-standard location."],
+        fixes=["Install Google Chrome from https://www.google.com/chrome/",
+               "Or point agenticSeek to it: export CHROME_EXECUTABLE_PATH=/path/to/chrome"])
 
 
 def get_chrome_path() -> str:
@@ -70,9 +80,7 @@ def get_chrome_path() -> str:
     if not sys.stdin or not sys.stdin.isatty():
         # containers/CI: no interactive prompt possible, fail loudly instead
         # of hanging or crashing with an EOFError traceback
-        raise FileNotFoundError(
-            "Google Chrome not found. Set CHROME_EXECUTABLE_PATH to the Chrome binary."
-        )
+        raise chrome_not_found_error()
     path = input("Google Chrome not found. Please enter the path to the Chrome executable: ")
     if os.path.exists(path) and os.access(path, os.X_OK):
         os.environ["CHROME_EXECUTABLE_PATH"] = path
@@ -137,15 +145,23 @@ def install_chromedriver() -> str:
         print("Installing matching ChromeDriver version automatically...")
         chromedriver_path = chromedriver_autoinstaller.install()
     except Exception as e:
-        raise FileNotFoundError(
-            "ChromeDriver not found and could not be installed automatically. "
-            "Please install it manually from https://chromedriver.chromium.org/downloads."
-            "and ensure it's in your PATH or specify the path directly."
-            "See know issues in readme if your chrome version is above 115."
-        ) from e
-    
+        raise AgenticSeekError(
+            "ChromeDriver missing",
+            f"No ChromeDriver matching your Chrome version was found, and installing one failed: {e}",
+            causes=["No network access to download ChromeDriver.",
+                    "Your Chrome version is newer than what the auto-installer supports (Chrome 115+)."],
+            fixes=["Download the ChromeDriver matching your Chrome version from "
+                   "https://googlechromelabs.github.io/chrome-for-testing/ and put it in the project root "
+                   "or in your PATH.",
+                   "See the known issues section of the README."]) from e
+
     if not chromedriver_path:
-        raise FileNotFoundError("ChromeDriver not found. Please install it or add it to your PATH.")
+        raise AgenticSeekError(
+            "ChromeDriver missing",
+            "No ChromeDriver was found and the auto-installer returned nothing.",
+            causes=["Chrome is not installed, so its version (and matching driver) cannot be detected."],
+            fixes=["Install Google Chrome, or download ChromeDriver from "
+                   "https://googlechromelabs.github.io/chrome-for-testing/ into the project root."])
     return chromedriver_path
 
 def bypass_ssl() -> str:
@@ -255,7 +271,7 @@ def create_chrome_options(headless=False, stealth_mode=True, crx_path="./crx/nop
     chrome_path = get_chrome_path()
     
     if not chrome_path:
-        raise FileNotFoundError("Google Chrome not found. Please install it.")
+        raise chrome_not_found_error()
     chrome_options.binary_location = chrome_path
     
     if headless:
@@ -521,18 +537,29 @@ def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx
     chromedriver_path = install_chromedriver()
     service = Service(chromedriver_path)
     
-    if stealth_mode:
-        try:
-            driver = create_undetected_chromedriver(service, chrome_options, identity=identity, lang=lang, crx_path=crx_path)
-        except Exception as e:
-            pretty_print(f"Undetected ChromeDriver failed ({e}).\nFalling back to the standard ChromeDriver; identity spoofing stays active.", color="warning")
-            # fresh profile dir: the failed uc attempt may still hold a lock on it
-            fresh_options = create_chrome_options(
-                headless=headless, stealth_mode=True, crx_path=crx_path, lang=lang,
-                identity=identity, anticaptcha=anticaptcha)
-            driver = webdriver.Chrome(service=service, options=fresh_options)
-    else:
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+    try:
+        if stealth_mode:
+            try:
+                driver = create_undetected_chromedriver(service, chrome_options, identity=identity, lang=lang, crx_path=crx_path)
+            except Exception as e:
+                pretty_print(f"Undetected ChromeDriver failed ({e}).\nFalling back to the standard ChromeDriver; identity spoofing stays active.", color="warning")
+                # fresh profile dir: the failed uc attempt may still hold a lock on it
+                fresh_options = create_chrome_options(
+                    headless=headless, stealth_mode=True, crx_path=crx_path, lang=lang,
+                    identity=identity, anticaptcha=anticaptcha)
+                driver = webdriver.Chrome(service=service, options=fresh_options)
+        else:
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+    except WebDriverException as e:
+        raise AgenticSeekError(
+            "Chrome failed to start",
+            f"ChromeDriver could not start Chrome: {(e.msg or str(e)).strip().splitlines()[0]}",
+            causes=["ChromeDriver and Chrome versions do not match (often right after a Chrome update).",
+                    "No display is available for a visible browser (server, SSH or Docker session).",
+                    "Another Chrome instance holds the agenticSeek browser profile."],
+            fixes=["Update ChromeDriver to your Chrome version, or delete ./chromedriver to re-download it.",
+                   "Set headless_browser = True in config.ini when no display is available.",
+                   "Close other agenticSeek or Chrome instances, then retry."]) from e
     apply_stealth_injection(driver, identity)
     return driver
 
