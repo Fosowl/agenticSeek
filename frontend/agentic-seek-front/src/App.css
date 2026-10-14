@@ -672,6 +672,17 @@ body {
   border-radius: 3px;
 }
 
+.content.content-files {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.files-pane {
+  flex: 1;
+  min-height: 0;
+}
+
 .blocks {
   display: flex;
   flex-direction: column;

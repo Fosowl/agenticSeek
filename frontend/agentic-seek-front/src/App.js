@@ -4,6 +4,7 @@ import axios from "axios";
 import "./App.css";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ResizableLayout } from "./components/ResizableLayout";
+import { FileExplorer } from "./components/FileExplorer";
 import faviconPng from "./logo.png";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,6 +21,10 @@ function App() {
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
   const messagesEndRef = useRef(null);
+  // Normalized texts of agent answers already shown. A ref (not `messages`)
+  // because polls overlap when the backend is slow: every in-flight response
+  // must see answers appended by responses that resolved before it.
+  const seenAnswersRef = useRef(new Set());
 
   const fetchLatestAnswer = useCallback(async () => {
     try {
@@ -31,30 +36,27 @@ function App() {
         return;
       }
       const normalizedNewAnswer = normalizeAnswer(data.answer);
-      const answerExists = messages.some(
-        (msg) => normalizeAnswer(msg.content) === normalizedNewAnswer
-      );
-      if (!answerExists) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "agent",
-            content: data.answer,
-            reasoning: data.reasoning,
-            agentName: data.agent_name,
-            status: data.status,
-            uid: data.uid,
-          },
-        ]);
-        setStatus(data.status);
-        scrollToBottom();
-      } else {
-        console.log("Duplicate answer detected, skipping:", data.answer);
+      if (seenAnswersRef.current.has(normalizedNewAnswer)) {
+        return;
       }
+      seenAnswersRef.current.add(normalizedNewAnswer);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "agent",
+          content: data.answer,
+          reasoning: data.reasoning,
+          agentName: data.agent_name,
+          status: data.status,
+          uid: data.uid,
+        },
+      ]);
+      setStatus(data.status);
+      scrollToBottom();
     } catch (error) {
       console.error("Error fetching latest answer:", error);
     }
-  }, [messages]);
+  }, []);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -364,10 +366,16 @@ function App() {
               >
                 Browser View
               </button>
+              <button
+                className={currentView === "files" ? "active" : ""}
+                onClick={() => setCurrentView("files")}
+              >
+                Files
+              </button>
             </div>
-            <div className="content">
+            <div className={`content ${currentView === "files" ? "content-files" : ""}`}>
               {error && <p className="error">{error}</p>}
-              {currentView === "blocks" ? (
+              {currentView === "blocks" && (
                 <div className="blocks">
                   {responseData &&
                   responseData.blocks &&
@@ -393,7 +401,8 @@ function App() {
                     </div>
                   )}
                 </div>
-              ) : (
+              )}
+              {currentView === "screenshot" && (
                 <div className="screenshot">
                   <img
                     src={responseData?.screenshot || "placeholder.png"}
@@ -406,6 +415,13 @@ function App() {
                   />
                 </div>
               )}
+              {/* Kept mounted so the expanded tree and open file survive tab switches. */}
+              <div hidden={currentView !== "files"} className="files-pane">
+                <FileExplorer
+                  backendUrl={BACKEND_URL}
+                  active={currentView === "files"}
+                />
+              </div>
             </div>
           </div>
         </ResizableLayout>

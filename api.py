@@ -24,6 +24,7 @@ from sources.browser_session_import import import_sessions_if_configured
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
 from sources.workspace import runtime_subdir
+from sources.files_api import router as files_router
 
 from dotenv import load_dotenv
 
@@ -72,6 +73,7 @@ api.add_middleware(
 
 SCREENSHOTS_DIR = runtime_subdir("screenshots")
 api.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots")
+api.include_router(files_router)
 
 def initialize_system():
     stealth_mode = config.getboolean('BROWSER', 'stealth_mode')
