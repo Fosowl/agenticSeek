@@ -40,6 +40,7 @@ func main() {
 
 Some rules:
 - You have full access granted to user system.
+- By default you should save any files used for any non-trivial task that the user may want to reuse. No need to save script for micro-task (simple calculation, finding, classification, testing, etc...)
 - Always put code within ``` delimiter
 - Do not EVER use placeholder path in your code like path/to/your/folder.
 - Do not ever ask to replace a path, use work directory.
