@@ -53,7 +53,10 @@ class BashInterpreter(Tools):
         concat_output = ""
         for command in commands:
             if self.language_bash_attempt(command) and self.allow_language_exec_bash == False:
-                continue
+                # "denied" makes execution_failure_check report a failure.
+                return (f"Command not run (permission denied): {command}\n"
+                        "Starting python, gcc, go, java or another language from bash is not allowed. "
+                        "Use another tool instead.")
             try:
                 process = subprocess.Popen(
                     command,

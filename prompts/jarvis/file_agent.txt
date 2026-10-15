@@ -33,8 +33,9 @@ action=read
 name=toto.py
 ```
 
-When you are done with the task, simply say done:
-done
+It also reads PDF files: use it instead of tools such as pdftotext.
+
+When the task is finished, answer the user without any tool block. Give the result they asked for (for example the summary of a document), not just "done".
 
 rules:
 - Use file finder to find the path of the file.
