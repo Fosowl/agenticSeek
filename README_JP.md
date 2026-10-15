@@ -88,6 +88,9 @@ ANTHROPIC_API_KEY='optional'
 - **OLLAMA_PORT**: Ollamaサービスのポート番号。
 - **LM_STUDIO_PORT**: LM Studioサービスのポート番号。
 - **CUSTOM_ADDITIONAL_LLM_PORT**: 追加のカスタムLLMサービスのポート。
+- **AGENTICSEEK_API_TOKEN**（任意）：WebインターフェースがバックエンドAPIに送信するトークン。未設定の場合、バックエンドが初回起動時に生成し、以降も再利用します。
+- **AGENTICSEEK_ALLOWED_HOSTS**（任意）：バックエンドが応答する追加のホスト名/IP（カンマ区切り。デフォルトは `localhost` と `127.0.0.1` のみ）。LANのIPやホスト名でバックエンドにアクセスする場合のみ、`REACT_APP_BACKEND_URL` と合わせて設定します（例：`192.168.1.100`）。
+- **AGENTICSEEK_EXEC_UID**（Docker）：エージェントのコマンドはこの非特権uidで実行されます。`start_services.sh` が `WORK_DIR` の所有者に設定します。旧バージョンからアップグレードするLinuxユーザーは、一度 `sudo chown -R $(id -u) "$WORK_DIR"` の実行が必要な場合があります。
 
 **APIキーは、ローカルでLLMを実行することを選択するユーザーには完全にオプションであり、これがこのプロジェクトの主な目的です。ハードウェアが十分にある場合は空のままにしてください。**
 
@@ -159,6 +162,8 @@ languages = en zh # 言語リスト、TTSはデフォルトでリストの最初
 [BROWSER]
 headless_browser = True # ホストでCLIを使用する場合を除き変更しない
 stealth_mode = True # 検出されにくいseleniumを使用してブラウザ検出を減らす
+import_user_profile = False # True: 自分のブラウザのログイン状態をエージェントのブラウザへ複製（先にそのブラウザを完全に終了）
+import_profile_name = Default # インポートするブラウザのプロファイル名
 ```
 
 **警告**:
@@ -273,6 +278,8 @@ start start_services.cmd full # Windows
 **警告:** このステップではすべてのDockerイメージがダウンロードされロードされます。最大30分かかる場合があります。サービスを起動した後、メッセージを送信する前にバックエンドサービスが完全に実行されていることを確認してください（ログに**backend: "GET /health HTTP/1.1" 200 OK**が表示されるはずです）。初回実行時、バックエンドサービスは起動に5分かかる場合があります。
 
 `http://localhost:3000/`にアクセスすると、Webインターフェースが表示されます。
+
+初回アクセス時、Webインターフェースは **APIトークン** を要求します。`docker compose logs backend | grep "API token"` または `docker exec backend cat /opt/agent-runtime/api_token` で取得してください（`.env` の `AGENTICSEEK_API_TOKEN` で独自のトークンを設定することもできます）。一度貼り付ければブラウザが記憶します。
 
 *サービス起動のトラブルシューティング:* これらのスクリプトが失敗する場合は、Docker Engineが実行中でDocker Compose（V2、`docker compose`）が正しくインストールされていることを確認してください。ターミナル出力のエラーメッセージを確認してください。[FAQ: ヘルプ！AgenticSeekまたはそのスクリプトを実行するとエラーが発生します](#faq-トラブルシューティング)を参照してください。
 
@@ -475,6 +482,18 @@ stealth_mode = False
     *   `headless_browser`: `True`は可視ウィンドウなしで自動化ブラウザを実行（Webインターフェースまたは非対話的使用に推奨）。`False`はブラウザウィンドウを表示（CLIモードまたはデバッグに有用）。
     *   `stealth_mode`: `True`はブラウザ自動化の検出を困難にする措置を有効にします。anticaptchaなどのブラウザ拡張機能の手動インストールが必要な場合があります。
 
+    *   **`import_user_profile`**: `True` にすると、次回起動時に自分のブラウザのログイン状態（cookie、localStorage、IndexedDB）をエージェントのブラウザへ複製し、エージェントがログイン済みサイトにそのままログインします。インポート中はそのブラウザを完全に終了し、エージェントは同じブラウザバイナリで動かす必要があります。日常ブラウザが Google Chrome でない場合は `CHROME_EXECUTABLE_PATH` と `CHROME_USER_DATA_DIR` の両方を指定してください（Brave の例: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`、`CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`）。既定 `False`: 有効にするとエージェントに認証済みセッション（メール、銀行）を渡します。`.browser_profile/` は gitignore 済みです。秘密として扱ってください。
+    *   **`import_profile_name`**: 複数のプロファイルがある場合にインポートするもの（`chrome://version` で名前を確認）。既定 `Default`。
+
+**セッションインポートの注意**:
+
+- ホストのみ：インポートは実際のブラウザデータを必要とするため、CLI モードまたはホスト上の `api.py` で動作します。Docker（`./start_services.sh full`）で実行する場合は `import_user_profile = False` のままにしてください。
+- インポートはプロファイルごとに一度だけ実行されます。`.browser_profile/session_import.json` のマーカーが再実行を防ぎ、`import_profile_name` を変更すると次回起動時に再インポートされます。手動で再実行するには: `uv run python -m sources.browser_session_import "<プロファイル名>"`（事前に shell で 2 つの `CHROME_*` 変数を export してください。このコマンドは `config.ini` を読みません）。
+- インポート直後は一度 `headless_browser = False` で起動してください。macOS のキーチェーン確認と「新しい端末」チェックには可視ウィンドウが必要です。
+- 以前のエージェントプロファイルは `.browser_profile/chrome_data.bak-<日付>` に保持されます。バックアップが自動削除されることはありません。
+- コピーには保存済みパスワード（`Login Data`）、自動入力データ（`Web Data`）、cookie が含まれ、エージェントはこれらのサイトであなたとして行動できます。`is_local = False` の場合、エージェントが読み取ったページ内容もクラウドモデルプロバイダーに送信されます。
+- パスキーは移行できません。厳格なサイト（一部の銀行など）ではエージェントのブラウザで再ログインを求められることがあります。元のブラウザ自身が復号できない古いセッションも移行されません。
+
 このセクションはサポートされているLLMプロバイダータイプをまとめています。`config.ini`で設定します。
 
 **ローカルプロバイダー（独自のハードウェアで実行）：**
@@ -497,6 +516,15 @@ stealth_mode = False
 | `togetherAI`                  | `False`    | TogetherAIのAPIを通じて様々なオープンモデルを使用。    | [APIを使用した実行設定](#apiを使用した実行設定) |
 
 ---
+## セキュリティモデル
+
+- バックエンドAPIにはトークンが必要です（`AGENTICSEEK_API_TOKEN`、未設定なら自動生成）。公開されているのは `/health` のみです。
+- `AGENTICSEEK_ALLOWED_HOSTS` にホストを追加しない限り、バックエンドは `localhost`/`127.0.0.1` にのみ応答します。
+- Docker では、エージェントが実行するコードは非特権ユーザーとして動作し、APIキー/トークン/シークレットは環境変数から削除されます。生成されたスクリプトは環境変数経由でプロバイダーのAPIキーを参照できなくなりました。必要な場合は明示的に渡してください。
+- バックエンドコンテナには、エージェントのコードからループバックへのアクセスを遮断するために `NET_ADMIN` ケーパビリティが必要です（`docker-compose.yml` で設定済み）。ない場合、エントリポイントは WARNING を表示し、エージェントのコードが chromedriver/Chrome DevTools に到達できる可能性があります。
+- それでもこのコードは `WORK_DIR` 内のすべてを読み書きでき、ネットワークも使用できます。公開してもよいフォルダのみをマウントしてください。
+- `safe_mode`（デフォルトで有効）はベストエフォートのコマンドフィルターであり、サンドボックスではありません。
+
 ## トラブルシューティング
 
 問題が発生した場合、このセクションはガイダンスを提供します。

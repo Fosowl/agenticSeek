@@ -1,5 +1,6 @@
 certifi==2025.4.26
 fastapi>=0.115.12
+python-multipart>=0.0.20
 flask>=3.1.0
 celery>=5.5.1
 aiofiles>=24.1.0

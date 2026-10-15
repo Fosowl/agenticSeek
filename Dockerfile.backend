@@ -94,6 +94,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir -p /opt/workspace
 RUN mkdir -p /tmp && chmod 1777 /tmp
 
+# Agent-run code executes as this unprivileged user (AGENTICSEEK_EXEC_UID);
+# iptables blocks it from loopback services (chromedriver, Chrome DevTools).
+RUN apt-get update -y && apt-get install -y iptables && rm -rf /var/lib/apt/lists/* \
+    && useradd --uid 1000 --user-group --create-home --shell /bin/bash agent
+
 # Copy application code
 COPY api.py .
 COPY sources/ ./sources/

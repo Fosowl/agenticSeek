@@ -3,6 +3,8 @@ from typing import List, Tuple, Type, Dict
 
 from sources.text_to_speech import Speech
 from sources.utility import pretty_print, animate_thinking
+from sources.errors import AgenticSeekError
+from sources.logger import report_error
 from sources.router import AgentRouter
 from sources.speech_to_text import Speech2Text
 import threading
@@ -271,7 +273,10 @@ class Interaction:
         self.last_query = query
 
     async def think(self) -> bool:
-        """Request AI agents to process the user input."""
+        """
+        Request AI agents to process the user input.
+        Returns False when there is no answer; agent failures are shown to the user, not raised.
+        """
         push_last_agent_memory = False
         if self.last_query is None or len(self.last_query) == 0:
             return False
@@ -283,14 +288,30 @@ class Interaction:
         tmp = self.last_answer
         self.current_agent = agent
         self.is_generating = True
-        self.last_answer, self.last_reasoning = await agent.process(self.last_query, self.speech)
-        self.is_generating = False
+        try:
+            self.last_answer, self.last_reasoning = await agent.process(self.last_query, self.speech)
+        except Exception as e:
+            self.report_agent_failure(agent, e)
+            return False
+        finally:
+            self.is_generating = False
         if push_last_agent_memory:
             self.current_agent.memory.push('user', self.last_query)
             self.current_agent.memory.push('assistant', self.last_answer)
         if self.last_answer == tmp:
             self.last_answer = None
         return True
+
+    def report_agent_failure(self, agent, exc: Exception) -> None:
+        """Show why the agent failed and expose a readable summary as its answer (web UI)."""
+        error = exc if isinstance(exc, AgenticSeekError) else \
+            AgenticSeekError.unexpected(exc, f"{agent.agent_name} was working on your request")
+        report_error(error, original=exc)
+        agent.status_message = f"Error: {error.title}"
+        agent.last_answer = error.summary()
+        agent.last_reasoning = ""
+        self.last_answer = agent.last_answer
+        self.last_reasoning = ""
 
     def speak_answer(self) -> None:
         """Speak the answer to the user in a non-blocking thread."""

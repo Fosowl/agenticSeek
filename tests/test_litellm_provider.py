@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sources.llm_provider import Provider
+from sources.errors import ProviderError
 
 
 class TestLiteLLMProvider(unittest.TestCase):
@@ -30,9 +31,9 @@ class TestLiteLLMProvider(unittest.TestCase):
         """Test that litellm provider raises error when is_local=True."""
         provider = Provider("litellm", "gpt-4o-mini", is_local=True)
         history = [{"role": "user", "content": "Hello"}]
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ProviderError) as context:
             provider.litellm_fn(history)
-        self.assertIn("not available for local use", str(context.exception))
+        self.assertEqual(context.exception.kind, "local_unsupported")
 
     @patch('litellm.completion')
     def test_litellm_fn_returns_content(self, mock_completion):
@@ -107,19 +108,19 @@ class TestLiteLLMProvider(unittest.TestCase):
         mock_completion.return_value = None
 
         provider = Provider("litellm", "gpt-4o-mini", is_local=False)
-        with self.assertRaises(Exception) as ctx:
+        with self.assertRaises(ProviderError) as ctx:
             provider.litellm_fn([{"role": "user", "content": "hi"}])
-        self.assertIn("empty", str(ctx.exception).lower())
+        self.assertEqual(ctx.exception.kind, "empty_response")
 
     @patch('litellm.completion')
-    def test_litellm_fn_raises_on_api_error(self, mock_completion):
-        """Test that litellm_fn wraps API errors."""
+    def test_respond_explains_api_error(self, mock_completion):
+        """respond() turns a raw LiteLLM failure into a diagnosed ProviderError."""
         mock_completion.side_effect = Exception("rate limit exceeded")
 
         provider = Provider("litellm", "gpt-4o-mini", is_local=False)
-        with self.assertRaises(Exception) as ctx:
-            provider.litellm_fn([{"role": "user", "content": "hi"}])
-        self.assertIn("LiteLLM API error", str(ctx.exception))
+        with self.assertRaises(ProviderError) as ctx:
+            provider.respond([{"role": "user", "content": "hi"}])
+        self.assertEqual(ctx.exception.kind, "rate_limit")
 
 
 if __name__ == '__main__':

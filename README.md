@@ -88,6 +88,9 @@ Update the `.env` file with your own values as needed:
 - **OLLAMA_PORT**: Port number for the Ollama service.
 - **LM_STUDIO_PORT**: Port number for the LM Studio service.
 - **CUSTOM_ADDITIONAL_LLM_PORT**: Port for any additional custom LLM service.
+- **AGENTICSEEK_API_TOKEN** (optional): Token the web UI must send to the backend API. If unset, the backend generates one on first start and reuses it.
+- **AGENTICSEEK_ALLOWED_HOSTS** (optional): Comma-separated extra hostnames/IPs the backend answers to (default: `localhost`, `127.0.0.1` only). Needed only when you reach the backend via a LAN IP or hostname, together with `REACT_APP_BACKEND_URL` (e.g. `192.168.1.100`).
+- **AGENTICSEEK_EXEC_UID** (Docker): Agent commands run as this unprivileged uid. `start_services.sh` sets it to the owner of `WORK_DIR`. Linux users upgrading from an older version may need to run `sudo chown -R $(id -u) "$WORK_DIR"` once.
 
 **API Key are totally optional for user who choose to run LLM locally. Which is the primary purpose of this project. Leave empty if you have sufficient hardware**
 
@@ -167,6 +170,8 @@ languages = en zh # The list of languages, Text to speech will default to the fi
 [BROWSER]
 headless_browser = True # leave unchanged unless using CLI on host.
 stealth_mode = True # Use undetected selenium to reduce browser detection
+import_user_profile = False # True: copy your own browser's logins into the agent browser (quit that browser first)
+import_profile_name = Default # which of your browser's profile folders to import
 ```
 
 **Warning**:
@@ -284,6 +289,8 @@ start start_services.cmd full # Window
 
 Go to `http://localhost:3000/` and you should see the web interface.
 
+On first open, the web interface asks for an **API token**. Get it with `docker compose logs backend | grep "API token"` or `docker exec backend cat /opt/agent-runtime/api_token` (or set your own with `AGENTICSEEK_API_TOKEN` in `.env`). Paste it once; the browser remembers it.
+
 *Troubleshooting service start:* If these scripts fail, ensure Docker Engine is running and Docker Compose (V2, `docker compose`) is correctly installed. Check the output in the terminal for error messages. See [FAQ: Help! I get an error when running AgenticSeek or its scripts.](#faq-troubleshooting)
 
 **Option 2:** CLI mode:
@@ -323,6 +330,8 @@ Use the CLI: `uv run cli.py`
 ## Usage
 
 Make sure the services are up and running with `./start_services.sh full` and go to `localhost:3000` for web interface.
+
+To give the agent your own files in the web interface, click the paperclip next to the send button and pick one or more files. When you send the message, the files are saved in `WORK_DIR/.user_uploads/` (an existing file is never replaced: a second `report.pdf` becomes `report (1).pdf`; `<`, `>` and `,` in names become `_`), and their paths are added to your message, for example `review this document <files>.user_uploads/report.pdf</files>`. The limit is 50 MB per file.
 
 You can also use speech to text by setting `listen = True` in the config. Only for CLI mode.
 
@@ -498,6 +507,18 @@ stealth_mode = False
     *   `stealth_mode`: `True` to enable measures to make browser automation harder to detect. May require manual installation of browser extensions like anticaptcha.
 
 
+    *   **`import_user_profile`**: `True` to copy the login sessions (cookies, localStorage, IndexedDB) of your own browser into the agent browser at the next start, so the agent is logged in where you are. That browser must be fully quit during the import, and the agent must run the same browser binary. If your daily browser is not Google Chrome, point both `CHROME_EXECUTABLE_PATH` and `CHROME_USER_DATA_DIR` at it (for Brave: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`, `CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`). Default `False`: this hands the agent your authenticated sessions (mail, bank). `.browser_profile/` is gitignored; treat it as a secret.
+    *   **`import_profile_name`**: which of your browser's profile folders to import when you have more than one (`chrome://version` shows the folder name). Default `Default`.
+
+**Session import notes**:
+
+- Host only: the import needs your real browser data, so it works in CLI mode or `api.py` on the host. Keep `import_user_profile = False` when you run agenticSeek with Docker (`./start_services.sh full`).
+- The import runs once per profile; the marker `.browser_profile/session_import.json` blocks repeats, and changing `import_profile_name` starts a new import at the next start. To redo it by hand: `uv run python -m sources.browser_session_import "<profile-name>"` (export the two `CHROME_*` variables in the shell first; this command does not read `config.ini`).
+- After a fresh import, start once with `headless_browser = False`: macOS keychain consent and "new device" checks need a visible window.
+- Your previous agent profile is kept at `.browser_profile/chrome_data.bak-<date>`; backups are never deleted automatically.
+- The copy includes saved passwords (`Login Data`), autofill data (`Web Data`) and cookies, so the agent can act as you on those sites. With `is_local = False`, page content it reads is also sent to your cloud model provider.
+- Passkeys never transfer; a few strict sites (some banks) may ask for one re-login inside the agent browser. Sessions your own browser can no longer decrypt do not transfer either.
+
 This section summarizes the supported LLM provider types. Configure them in `config.ini`.
 
 **Local Providers (Run on Your Own Hardware):**
@@ -520,6 +541,15 @@ This section summarizes the supported LLM provider types. Configure them in `con
 | `togetherAI`                  | `False`    | Use TogetherAI's API for various open models.    | [Setup to run with an API](#setup-to-run-with-an-api) |
 
 ---
+## Security model
+
+- The backend API requires a token (`AGENTICSEEK_API_TOKEN`, auto-generated if unset). Only `/health` is public.
+- The backend only answers to `localhost`/`127.0.0.1` unless you add hosts in `AGENTICSEEK_ALLOWED_HOSTS`.
+- In Docker, code the agent runs executes as an unprivileged user, and API keys/tokens/secrets are removed from its environment. Generated scripts no longer see provider API keys via env; pass a key explicitly if a script needs one.
+- The backend container needs the `NET_ADMIN` capability (set in `docker-compose.yml`) to block agent code from loopback; without it the entrypoint prints a WARNING and agent code could reach chromedriver/Chrome DevTools.
+- That code can still read and write everything in `WORK_DIR` and use the network: only mount folders you are fine exposing.
+- `safe_mode` (on by default) is a best-effort command filter, not a sandbox.
+
 ## Troubleshooting
 
 If you encounter issues, this section provides guidance.

@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sources.llm_provider import Provider
+from sources.errors import ProviderError
 
 
 class TestDeepseekProvider(unittest.TestCase):
@@ -36,9 +37,9 @@ class TestDeepseekProvider(unittest.TestCase):
         provider = Provider("deepseek", "deepseek-chat", is_local=True)
         provider.api_key = 'test-key'
         history = [{"role": "user", "content": "Hello"}]
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ProviderError) as context:
             provider.deepseek_fn(history)
-        self.assertIn("not available for local use", str(context.exception))
+        self.assertEqual(context.exception.kind, "local_unsupported")
 
     @patch('sources.llm_provider.OpenAI')
     @patch.dict(os.environ, {'DEEPSEEK_API_KEY': 'test-key'})

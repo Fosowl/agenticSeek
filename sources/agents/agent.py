@@ -2,6 +2,7 @@
 from typing import Tuple, Callable
 from abc import abstractmethod
 import os
+import re
 import random
 import time
 
@@ -10,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from sources.memory import Memory
 from sources.utility import pretty_print
+from sources.errors import AgenticSeekError
 from sources.schemas import executorResult
 
 random.seed(time.time())
@@ -113,12 +115,19 @@ class Agent():
         try:
             with open(file_path, 'r', encoding="utf-8") as f:
                 return f.read()
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Prompt file not found at path: {file_path}")
-        except PermissionError:
-            raise PermissionError(f"Permission denied to read prompt file at path: {file_path}")
-        except Exception as e:
-            raise e
+        except FileNotFoundError as e:
+            raise AgenticSeekError(
+                "Prompt file missing",
+                f"The {self.agent_name} agent prompt was not found at {os.path.abspath(file_path)}.",
+                causes=["agenticSeek was started from another directory than the project root.",
+                        "The prompts/ folder is incomplete."],
+                fixes=["Start agenticSeek from the project root directory.",
+                       "Restore the prompts folder: git checkout -- prompts"]) from e
+        except PermissionError as e:
+            raise AgenticSeekError(
+                "Prompt file unreadable",
+                f"Permission denied while reading {os.path.abspath(file_path)}.",
+                fixes=[f"Make it readable: chmod u+r {file_path}"]) from e
     
     def request_stop(self) -> None:
         """
@@ -212,18 +221,14 @@ class Agent():
     def show_answer(self):
         """
         Show the answer in a pretty way.
-        Show code blocks and their respective feedback by inserting them in the ressponse.
+        Block markers are skipped: each block and its output is printed when it runs (execute_modules).
         """
         if self.last_answer is None:
             return
-        lines = self.last_answer.split("\n")
-        for line in lines:
-            if "block:" in line:
-                block_idx = int(line.split(":")[1])
-                if block_idx < len(self.blocks_result):
-                    self.blocks_result[block_idx].show()
-            else:
-                pretty_print(line, color="output")
+        for line in self.last_answer.split("\n"):
+            if re.fullmatch(r"block:\d+", line.strip()):
+                continue
+            pretty_print(line, color="output")
 
     def remove_blocks(self, text: str) -> str:
         """
@@ -277,6 +282,7 @@ class Agent():
                     feedback = tool.interpreter_feedback(output) # tool interpreter feedback
                     success = not tool.execution_failure_check(output)
                     self.blocks_result.append(executorResult(block, feedback, success, name))
+                    self.blocks_result[-1].show()
                     if not success:
                         self.success = False
                         self.memory.push('user', feedback)

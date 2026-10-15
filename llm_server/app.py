@@ -50,4 +50,5 @@ def get_updated_sentence():
     return generator.get_status()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', threaded=True, debug=True, port=args.port)
+    # Never debug=True: the Werkzeug debugger is remote code execution on 0.0.0.0.
+    app.run(host='0.0.0.0', threaded=True, debug=False, port=args.port)

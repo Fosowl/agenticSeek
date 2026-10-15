@@ -16,6 +16,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "fastapi>=0.115.12",
+        "python-multipart>=0.0.20",
         "celery>=5.5.1",
         "uvicorn>=0.34.0",
         "flask>=3.1.0",

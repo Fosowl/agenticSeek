@@ -7,22 +7,23 @@ import configparser
 import asyncio
 import time
 from typing import List
-from fastapi import Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import uuid
 
-from sources.api_auth import require_api_token
+from sources.api_auth import HostAllowlistMiddleware, allowed_hosts, ensure_api_token, require_api_token
 from sources.llm_provider import Provider
 from sources.interaction import Interaction
 from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
 from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
+from sources.browser_session_import import import_sessions_if_configured
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
 from sources.workspace import runtime_subdir
+from sources.files_api import router as files_router
 
 from dotenv import load_dotenv
 
@@ -68,9 +69,15 @@ api.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Reject foreign Host headers so DNS rebinding cannot reach the loopback API.
+api.add_middleware(HostAllowlistMiddleware, hosts=allowed_hosts())
+
+# Every route on this router needs the API token; only /health stays public.
+protected = APIRouter(dependencies=[Depends(require_api_token)])
+api_token, api_token_path = ensure_api_token()
 
 SCREENSHOTS_DIR = runtime_subdir("screenshots")
-api.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots")
+api.include_router(files_router)
 
 def initialize_system():
     stealth_mode = config.getboolean('BROWSER', 'stealth_mode')
@@ -97,6 +104,8 @@ def initialize_system():
     )
     logger.info(f"Provider initialized: {provider.provider_name} ({provider.model})")
 
+    if not is_running_in_docker():  # no host browser data inside the container
+        import_sessions_if_configured(config, headless=headless)
     browser = Browser(
         create_driver(headless=headless, stealth_mode=stealth_mode, lang=languages[0]),
         anticaptcha_manual_install=stealth_mode
@@ -146,7 +155,7 @@ interaction = initialize_system()
 is_generating = False
 query_resp_history = []
 
-@api.get("/screenshot")
+@protected.get("/screenshot")
 async def get_screenshot():
     logger.info("Screenshot endpoint called")
     screenshot_path = os.path.join(SCREENSHOTS_DIR, "updated_screen.png")
@@ -163,18 +172,18 @@ async def health_check():
     logger.info("Health check endpoint called")
     return {"status": "healthy", "version": "0.1.0"}
 
-@api.get("/is_active")
+@protected.get("/is_active")
 async def is_active():
     logger.info("Is active endpoint called")
     return {"is_active": interaction.is_active}
 
-@api.get("/stop")
+@protected.get("/stop")
 async def stop():
     logger.info("Stop endpoint called")
     interaction.current_agent.request_stop()
     return JSONResponse(status_code=200, content={"status": "stopped"})
 
-@api.get("/latest_answer")
+@protected.get("/latest_answer")
 async def get_latest_answer():
     global query_resp_history
     if interaction.current_agent is None:
@@ -221,11 +230,7 @@ async def think_wrapper(interaction, query):
         interaction.last_success = False
         raise e
 
-@api.post(
-    "/query",
-    response_model=QueryResponse,
-    dependencies=[Depends(require_api_token)],
-)
+@protected.post("/query", response_model=QueryResponse)
 async def process_query(request: QueryRequest):
     global is_generating, query_resp_history
     logger.info(f"Processing query: {request.query}")
@@ -294,6 +299,8 @@ async def process_query(request: QueryRequest):
         if config.getboolean('MAIN', 'save_session'):
             interaction.save_session()
 
+api.include_router(protected)
+
 if __name__ == "__main__":
     # Print startup info
     if is_running_in_docker():
@@ -306,16 +313,22 @@ if __name__ == "__main__":
         port = int(envport)
     else:
         port = 7777
-    # Bind to loopback by default. The /query endpoint is unauthenticated and the
-    # coder agent executes shell commands on the host, so exposing it on a network
-    # interface is equivalent to handing out remote code execution. Set BACKEND_HOST
-    # explicitly (and put the service behind authentication / a firewall) to expose it.
+    if api_token_path:
+        pretty_print(
+            f"AgenticSeek API token: {api_token}\n"
+            f"Paste it into the web UI when asked. Stored in {api_token_path}; "
+            "set AGENTICSEEK_API_TOKEN to choose your own.",
+            color="success",
+        )
+    # Bind to loopback by default. The agent executes shell commands, so even with
+    # the token required, exposing the API on a network interface sends the token
+    # in clear text. Set BACKEND_HOST explicitly (behind TLS / a firewall) to expose it.
     host = os.getenv("BACKEND_HOST", "127.0.0.1")
     if host not in ("127.0.0.1", "localhost", "::1"):
         pretty_print(
-            f"SECURITY WARNING: backend bound to {host}. The API is unauthenticated and "
-            "can execute shell commands on this host. Only do this on a trusted network "
-            "and behind an authenticating reverse proxy or firewall.",
+            f"SECURITY WARNING: backend bound to {host}. The API can execute shell "
+            "commands on this host and its token travels in clear text over HTTP. "
+            "Only do this on a trusted network or behind a TLS reverse proxy.",
             color="failure",
         )
     uvicorn.run(api, host=host, port=port)

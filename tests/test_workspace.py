@@ -79,6 +79,15 @@ class TestFileFinderWorkspaceIsolation(WorkspaceTestCase):
         self.assertIn("error", result)
         self.assertIn("outside the agent workspace", result["error"])
 
+    def test_finds_file_by_workspace_path(self):
+        os.makedirs(os.path.join(self._work_dir, ".user_uploads"))
+        for name in ("old_finance.pdf", ".user_uploads/finance.pdf"):
+            open(os.path.join(self._work_dir, name), "w").close()
+
+        found = FileFinder().find_file(".user_uploads/finance.pdf")
+        expected = os.path.join(self._work_dir, ".user_uploads", "finance.pdf")
+        self.assertEqual(found, os.path.realpath(expected))
+
 
 if __name__ == "__main__":
     unittest.main()

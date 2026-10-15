@@ -33,6 +33,19 @@ if [ -n "$dir_size_bytes" ] && [ "$dir_size_bytes" -gt "$max_size_bytes" ]; then
     exit 1
 fi
 
+# Agent-run code in the backend container runs as an unprivileged uid; use the
+# owner of WORK_DIR so it can write there on Linux bind mounts.
+if [ -z "$AGENTICSEEK_EXEC_UID" ]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        work_dir_owner=$(stat -f %u "$WORK_DIR" 2>/dev/null)
+    else
+        work_dir_owner=$(stat -c %u "$WORK_DIR" 2>/dev/null)
+    fi
+    if [ -n "$work_dir_owner" ] && [ "$work_dir_owner" != "0" ]; then
+        export AGENTICSEEK_EXEC_UID="$work_dir_owner"
+    fi
+fi
+
 if [ "$1" = "full" ]; then
     echo "Starting full deployment with backend and all services..."
 else

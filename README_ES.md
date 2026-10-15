@@ -88,6 +88,9 @@ Actualiza el archivo `.env` según sea necesario:
 - **OLLAMA_PORT**: Número de puerto para el servicio Ollama.
 - **LM_STUDIO_PORT**: Número de puerto para el servicio LM Studio.
 - **CUSTOM_ADDITIONAL_LLM_PORT**: Puerto para cualquier servicio LLM adicional personalizado.
+- **AGENTICSEEK_API_TOKEN** (opcional): Token que la interfaz web debe enviar a la API del backend. Si no se define, el backend genera uno en el primer arranque y lo reutiliza.
+- **AGENTICSEEK_ALLOWED_HOSTS** (opcional): Nombres de host/IP adicionales, separados por comas, a los que responde el backend (por defecto solo `localhost` y `127.0.0.1`). Solo es necesario si accedes al backend mediante una IP de LAN o un nombre de host, junto con `REACT_APP_BACKEND_URL` (p. ej. `192.168.1.100`).
+- **AGENTICSEEK_EXEC_UID** (Docker): Los comandos del agente se ejecutan con este uid sin privilegios. `start_services.sh` lo fija al propietario de `WORK_DIR`. Los usuarios de Linux que actualicen desde una versión anterior pueden necesitar ejecutar una vez `sudo chown -R $(id -u) "$WORK_DIR"`.
 
 **Las claves API son completamente opcionales para quienes optan por ejecutar LLM localmente, que es el objetivo principal de este proyecto. Déjalas en blanco si tienes hardware suficiente.**
 
@@ -159,6 +162,8 @@ languages = en zh # Lista de idiomas, TTS usará el primero de la lista por defe
 [BROWSER]
 headless_browser = True # mantener sin cambios a menos que uses CLI en el host.
 stealth_mode = True # Usa selenium indetectable para reducir la detección del navegador
+import_user_profile = False # True: copia los inicios de sesión de tu navegador al navegador del agente (cierra ese navegador antes)
+import_profile_name = Default # carpeta de perfil del navegador a importar
 ```
 
 **Advertencia**:
@@ -272,6 +277,8 @@ start start_services.cmd full # Windows
 **Advertencia:** Este paso descargará y cargará todas las imágenes de Docker, lo que puede tardar hasta 30 minutos. Después de iniciar los servicios, espera hasta que el servicio backend esté completamente ejecutándose (deberías ver **backend: "GET /health HTTP/1.1" 200 OK** en el registro) antes de enviar cualquier mensaje. En la primera ejecución, el servicio backend puede tardar 5 minutos en iniciarse.
 
 Ve a `http://localhost:3000/` y deberías ver la interfaz web.
+
+Al abrirla por primera vez, la interfaz web pide un **token de API**. Obtenlo con `docker compose logs backend | grep "API token"` o `docker exec backend cat /opt/agent-runtime/api_token` (o define el tuyo con `AGENTICSEEK_API_TOKEN` en `.env`). Pégalo una vez; el navegador lo recuerda.
 
 *Solución de problemas de inicio de servicios:* Si estos scripts fallan, asegúrate de que Docker Engine esté ejecutándose y que Docker Compose (V2, `docker compose`) esté correctamente instalado. Revisa los mensajes de error en la salida de la terminal. Consulta [FAQ: ¡Ayuda! Obtengo errores al ejecutar AgenticSeek o sus scripts.](#faq-solución-de-problemas)
 
@@ -474,6 +481,18 @@ stealth_mode = False
     *   `headless_browser`: `True` para ejecutar el navegador automatizado sin una ventana visible (recomendado para interfaz web o uso no interactivo). `False` para mostrar la ventana del navegador (útil para modo CLI o depuración).
     *   `stealth_mode`: `True` para habilitar medidas que dificultan la detección de la automatización del navegador. Puede requerir la instalación manual de extensiones del navegador como anticaptcha.
 
+    *   **`import_user_profile`**: `True` para copiar las sesiones iniciadas (cookies, localStorage, IndexedDB) de tu propio navegador al navegador del agente en el siguiente inicio, de modo que el agente quede conectado donde tú lo estás. Ese navegador debe estar totalmente cerrado durante la importación, y el agente debe usar el mismo binario del navegador. Si tu navegador habitual no es Google Chrome, apunta `CHROME_EXECUTABLE_PATH` y `CHROME_USER_DATA_DIR` a él (para Brave: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`, `CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`). Por defecto `False`: esto entrega al agente tus sesiones autenticadas (correo, banco). `.browser_profile/` está en gitignore; trátalo como un secreto.
+    *   **`import_profile_name`**: carpeta de perfil del navegador a importar cuando tienes más de una (`chrome://version` muestra el nombre). Por defecto `Default`.
+
+**Notas sobre la importación de sesiones**:
+
+- Solo en el host: la importación necesita los datos reales de tu navegador, así que funciona en modo CLI o con `api.py` en el host. Mantén `import_user_profile = False` si ejecutas agenticSeek con Docker (`./start_services.sh full`).
+- La importación se ejecuta una vez por perfil; el marcador `.browser_profile/session_import.json` bloquea repeticiones, y cambiar `import_profile_name` inicia una nueva importación en el siguiente arranque. Para rehacerla a mano: `uv run python -m sources.browser_session_import "<nombre-del-perfil>"` (exporta antes las dos variables `CHROME_*` en el shell; este comando no lee `config.ini`).
+- Tras una importación nueva, inicia una vez con `headless_browser = False`: el consentimiento del llavero de macOS y las comprobaciones de "nuevo dispositivo" necesitan una ventana visible.
+- Tu perfil de agente anterior se conserva en `.browser_profile/chrome_data.bak-<fecha>`; las copias nunca se borran automáticamente.
+- La copia incluye contraseñas guardadas (`Login Data`), datos de autocompletado (`Web Data`) y cookies, por lo que el agente puede actuar como tú en esos sitios. Con `is_local = False`, el contenido de las páginas que lea también se envía a tu proveedor de modelos en la nube.
+- Las passkeys nunca se transfieren; algunos sitios estrictos (ciertos bancos) pueden pedir un nuevo inicio de sesión dentro del navegador del agente. Las sesiones que tu propio navegador ya no puede descifrar tampoco se transfieren.
+
 Esta sección resume los tipos de proveedores de LLM admitidos. Configúralos en `config.ini`.
 
 **Proveedores locales (ejecutándose en tu propio hardware):**
@@ -496,6 +515,15 @@ Esta sección resume los tipos de proveedores de LLM admitidos. Configúralos en
 | `togetherAI`                  | `False`    | Usa varios modelos abiertos a través de la API de TogetherAI.    | [Configuración para ejecutar con una API](#configuración-para-ejecutar-con-una-api) |
 
 ---
+## Modelo de seguridad
+
+- La API del backend requiere un token (`AGENTICSEEK_API_TOKEN`, generado automáticamente si no se define). Solo `/health` es público.
+- El backend solo responde a `localhost`/`127.0.0.1` salvo que añadas hosts en `AGENTICSEEK_ALLOWED_HOSTS`.
+- En Docker, el código que ejecuta el agente corre como un usuario sin privilegios y las claves/tokens/secretos de API se eliminan de su entorno. Los scripts generados ya no ven las claves de API de los proveedores por variables de entorno; pasa una clave explícitamente si un script la necesita.
+- El contenedor del backend necesita la capacidad `NET_ADMIN` (definida en `docker-compose.yml`) para bloquear el acceso del código del agente a loopback; sin ella, el entrypoint muestra un WARNING y el código del agente podría alcanzar chromedriver/Chrome DevTools.
+- Ese código aún puede leer y escribir todo en `WORK_DIR` y usar la red: monta solo carpetas que no te importe exponer.
+- `safe_mode` (activado por defecto) es un filtro de comandos de mejor esfuerzo, no un sandbox.
+
 ## Solución de problemas
 
 Si encuentras problemas, esta sección proporciona orientación.

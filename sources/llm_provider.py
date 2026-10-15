@@ -5,17 +5,18 @@ import subprocess
 import time
 from urllib.parse import urlparse
 
-import httpx
 import requests
 from dotenv import load_dotenv
 from ollama import Client as OllamaClient
 from openai import OpenAI
 
-from sources.logger import Logger
+from sources.errors import AgenticSeekError, ProviderContext, diagnose_provider_error, provider_error
+from sources.logger import Logger, install_excepthook
 from sources.utility import pretty_print, animate_thinking
 
 class Provider:
     def __init__(self, provider_name, model, server_address="127.0.0.1:5000", is_local=False):
+        install_excepthook()  # the provider is built first at startup: show later setup errors as panels
         self.provider_name = provider_name.lower()
         # Normalize provider name aliases (e.g. README documents 'togetherAI' but canonical key is 'together')
         _aliases = {"togetherai": "together"}
@@ -45,7 +46,10 @@ class Provider:
         self.internal_url, self.in_docker = self.get_internal_url()
         self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
         if self.provider_name not in self.available_providers:
-            raise ValueError(f"Unknown provider: {provider_name}")
+            raise AgenticSeekError(
+                "Unknown provider",
+                f"provider_name = {provider_name} in config.ini is not a supported provider.",
+                fixes=[f"Use one of: {', '.join(name for name in self.available_providers if name != 'test')}."])
         if self.provider_name in self.unsafe_providers and self.is_local == False:
             pretty_print("Warning: you are using an API provider. You data will be sent to the cloud.", color="warning")
             self.api_key = self.get_api_key(self.provider_name)
@@ -57,14 +61,13 @@ class Provider:
 
     def get_api_key(self, provider):
         load_dotenv()
-        api_key_var = f"{provider.upper()}_API_KEY"
-        api_key = os.getenv(api_key_var)
+        api_key = os.getenv(f"{provider.upper()}_API_KEY")
         if not api_key:
-            raise ValueError(
-                f"API key {api_key_var} not found in .env file. "
-                "Please add it to your .env file and restart the server."
-            )
+            raise provider_error("missing_key", ProviderContext(provider, self.model))
         return api_key
+
+    def error_context(self) -> ProviderContext:
+        return ProviderContext(self.provider_name, self.model, self.server_ip, self.is_local, self.api_key)
 
     def get_internal_url(self):
         load_dotenv()
@@ -76,28 +79,21 @@ class Provider:
     def respond(self, history, verbose=True):
         """
         Use the choosen provider to generate text.
+        Raises:
+            AgenticSeekError: the request failed; the error explains why and how to fix it.
         """
         llm = self.available_providers[self.provider_name]
         self.logger.info(f"Using provider: {self.provider_name} at {self.server_ip}")
         try:
-            thought = llm(history, verbose)
+            return llm(history, verbose)
         except KeyboardInterrupt:
             self.logger.warning("User interrupted the operation with Ctrl+C")
             return "Operation interrupted by user. REQUEST_EXIT"
-        except ConnectionError as e:
-            raise ConnectionError(f"{str(e)}\nConnection to {self.server_ip} failed.")
-        except AttributeError as e:
-            raise NotImplementedError(f"{str(e)}\nIs {self.provider_name} implemented ?")
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError(
-                f"{str(e)}\nA import related to provider {self.provider_name} was not found. Is it installed ?")
+        except AgenticSeekError:
+            raise
         except Exception as e:
-            if "try again later" in str(e).lower():
-                return f"{self.provider_name} server is overloaded. Please try again later."
-            if "refused" in str(e):
-                return f"Server {self.server_ip} seem offline. Unable to answer."
-            raise Exception(f"Provider {self.provider_name} failed: {str(e)}") from e
-        return thought
+            self.logger.error(f"Provider {self.provider_name} failed: {e!r}")
+            raise diagnose_provider_error(e, self.error_context()) from e
 
     def is_ip_online(self, address: str, timeout: int = 10) -> bool:
         """
@@ -134,33 +130,16 @@ class Provider:
         if not self.is_ip_online(self.server_ip):
             pretty_print(f"Server is offline at {self.server_ip}", color="failure")
 
-        try:
-            requests.post(route_setup, json={"model": self.model})
-            requests.post(route_gen, json={"messages": history})
-            is_complete = False
-            while not is_complete:
-                try:
-                    response = requests.get(f"{self.server_ip}/get_updated_sentence")
-                    if "error" in response.json():
-                        pretty_print(response.json()["error"], color="failure")
-                        break
-                    thought = response.json()["sentence"]
-                    is_complete = bool(response.json()["is_complete"])
-                    time.sleep(2)
-                except requests.exceptions.RequestException as e:
-                    pretty_print(f"HTTP request failed: {str(e)}", color="failure")
-                    break
-                except ValueError as e:
-                    pretty_print(f"Failed to parse JSON response: {str(e)}", color="failure")
-                    break
-                except Exception as e:
-                    pretty_print(f"An error occurred: {str(e)}", color="failure")
-                    break
-        except KeyError as e:
-            raise Exception(
-                f"{str(e)}\nError occured with server route. Are you using the correct address for the config.ini provider?") from e
-        except Exception as e:
-            raise e
+        requests.post(route_setup, json={"model": self.model})
+        requests.post(route_gen, json={"messages": history})
+        is_complete = False
+        while not is_complete:
+            status = requests.get(f"{self.server_ip}/get_updated_sentence").json()
+            if "error" in status:
+                raise provider_error("server_error", self.error_context(), str(status["error"]))
+            thought = status["sentence"]
+            is_complete = bool(status["is_complete"])
+            time.sleep(2)
         return thought
 
     def ollama_fn(self, history, verbose=False):
@@ -185,20 +164,12 @@ class Provider:
                 if verbose:
                     print(chunk["message"]["content"], end="", flush=True)
                 thought += chunk["message"]["content"]
-        except httpx.ConnectError as e:
-            raise Exception(
-                f"\nOllama connection failed at {host}. Check if the server is running."
-            ) from e
         except Exception as e:
-            if hasattr(e, 'status_code') and e.status_code == 404:
+            if getattr(e, "status_code", None) == 404:
                 animate_thinking(f"Downloading {self.model}...")
                 client.pull(self.model)
                 return self.ollama_fn(history, verbose)
-            if "refused" in str(e).lower():
-                raise Exception(
-                    f"Ollama connection refused at {host}. Is the server running?"
-                ) from e
-            raise e
+            raise
 
         return thought
 
@@ -234,19 +205,16 @@ class Provider:
         else:
             client = OpenAI(api_key=self.api_key)
 
-        try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-            )
-            if response is None:
-                raise Exception("OpenAI response is empty.")
-            thought = response.choices[0].message.content
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"OpenAI API error: {str(e)}") from e
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
 
     def anthropic_fn(self, history, verbose=False):
         """
@@ -264,87 +232,73 @@ class Provider:
             else:
                 messages.append(clean_message)
 
-        try:
-            response = client.messages.create(
-                model=self.model,
-                max_tokens=1024,
-                messages=messages,
-                system=system_message
-            )
-            if response is None:
-                raise Exception("Anthropic response is empty.")
-            thought = response.content[0].text
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"Anthropic API error: {str(e)}") from e
+        response = client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            messages=messages,
+            system=system_message
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.content[0].text
+        if verbose:
+            print(thought)
+        return thought
 
     def google_fn(self, history, verbose=False):
         """
         Use google gemini to generate text.
         """
-        base_url = self.server_ip
         if self.is_local:
-            raise Exception("Google Gemini is not available for local use. Change config.ini")
+            raise provider_error("local_unsupported", self.error_context())
 
         client = OpenAI(api_key=self.api_key, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
-        try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-            )
-            if response is None:
-                raise Exception("Google response is empty.")
-            thought = response.choices[0].message.content
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"GOOGLE API error: {str(e)}") from e
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
 
     def together_fn(self, history, verbose=False):
         """
         Use together AI for completion
         """
         from together import Together
-        client = Together(api_key=self.api_key)
         if self.is_local:
-            raise Exception("Together AI is not available for local use. Change config.ini")
-
-        try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-            )
-            if response is None:
-                raise Exception("Together AI response is empty.")
-            thought = response.choices[0].message.content
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"Together AI API error: {str(e)}") from e
+            raise provider_error("local_unsupported", self.error_context())
+        client = Together(api_key=self.api_key)
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
 
     def deepseek_fn(self, history, verbose=False):
         """
         Use deepseek api to generate text.
         """
-        client = OpenAI(api_key=self.api_key, base_url="https://api.deepseek.com")
         if self.is_local:
-            raise Exception("Deepseek (API) is not available for local use. Change config.ini")
-        try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-                stream=False
-            )
-            thought = response.choices[0].message.content
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"Deepseek API error: {str(e)}") from e
+            raise provider_error("local_unsupported", self.error_context())
+        client = OpenAI(api_key=self.api_key, base_url="https://api.deepseek.com")
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+            stream=False
+        )
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
 
     def lm_studio_fn(self, history, verbose=False):
         """
@@ -381,62 +335,34 @@ class Provider:
             "model": self.model
         }
 
-        try:
-            response = requests.post(route_start, json=payload, timeout=30)
-            if response.status_code != 200:
-                raise Exception(f"LM Studio returned status {response.status_code}: {response.text}")
-            if not response.text.strip():
-                raise Exception("LM Studio returned empty response")
-            try:
-                result = response.json()
-            except ValueError as json_err:
-                raise Exception(f"Invalid JSON from LM Studio: {response.text[:200]}") from json_err
-
-            if verbose:
-                print("Response from LM Studio:", result)
-            choices = result.get("choices", [])
-            if not choices:
-                raise Exception(f"No choices in LM Studio response: {result}")
-
-            message = choices[0].get("message", {})
-            content = message.get("content", "")
-            if not content:
-                raise Exception(f"Empty content in LM Studio response: {result}")
-            return content
-
-        except requests.exceptions.Timeout:
-            raise Exception("LM Studio request timed out - check if server is responsive")
-        except requests.exceptions.ConnectionError:
-            raise Exception(f"Cannot connect to LM Studio at {route_start} - check if server is running")
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"HTTP request failed: {str(e)}") from e
-        except Exception as e:
-            if "LM Studio" in str(e):
-                raise  # Re-raise our custom exceptions
-            raise Exception(f"Unexpected error: {str(e)}") from e
+        response = requests.post(route_start, json=payload, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        if verbose:
+            print("Response from LM Studio:", result)
+        choices = result.get("choices") or [{}]
+        content = choices[0].get("message", {}).get("content", "")
+        if not content:
+            raise provider_error("empty_response", self.error_context(), str(result)[:200])
+        return content
 
     def openrouter_fn(self, history, verbose=False):
         """
         Use OpenRouter API to generate text.
         """
-        client = OpenAI(api_key=self.api_key, base_url="https://openrouter.ai/api/v1")
         if self.is_local:
-            # This case should ideally not be reached if unsafe_providers is set correctly
-            # and is_local is False in config for openrouter
-            raise Exception("OpenRouter is not available for local use. Change config.ini")
-        try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-            )
-            if response is None:
-                raise Exception("OpenRouter response is empty.")
-            thought = response.choices[0].message.content
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"OpenRouter API error: {str(e)}") from e
+            raise provider_error("local_unsupported", self.error_context())
+        client = OpenAI(api_key=self.api_key, base_url="https://openrouter.ai/api/v1")
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
 
     def minimax_fn(self, history, verbose=False):
         """
@@ -453,52 +379,47 @@ class Provider:
         base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/v1")
 
         if self.is_local:
-            raise Exception("MiniMax is not available for local use. Change config.ini")
-        try:
-            if base_url.rstrip("/").endswith("/anthropic"):
-                system_message = None
-                messages = []
-                for message in history:
-                    if message["role"] == "system":
-                        system_message = message["content"]
-                    else:
-                        messages.append(message)
-                payload = {
-                    "model": self.model,
-                    "max_tokens": 1024,
-                    "messages": messages,
-                    "temperature": 1.0,
-                }
-                if system_message is not None:
-                    payload["system"] = system_message
-                response = requests.post(
-                    f"{base_url.rstrip('/')}/v1/messages",
-                    headers={"Content-Type": "application/json", "X-Api-Key": self.api_key},
-                    json=payload,
-                    timeout=30,
-                )
-                response.raise_for_status()
-                content = response.json().get("content", [])
-                thought = "".join(
-                    block.get("text", "") for block in content if block.get("type") == "text"
-                )
-            else:
-                client = OpenAI(api_key=self.api_key, base_url=base_url)
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=history,
-                    temperature=1.0,
-                )
-                thought = response.choices[0].message.content if response is not None else None
-            if response is None:
-                raise Exception("MiniMax response is empty.")
-            if not thought:
-                raise Exception("MiniMax response is empty.")
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"MiniMax API error: {str(e)}") from e
+            raise provider_error("local_unsupported", self.error_context())
+        if base_url.rstrip("/").endswith("/anthropic"):
+            system_message = None
+            messages = []
+            for message in history:
+                if message["role"] == "system":
+                    system_message = message["content"]
+                else:
+                    messages.append(message)
+            payload = {
+                "model": self.model,
+                "max_tokens": 1024,
+                "messages": messages,
+                "temperature": 1.0,
+            }
+            if system_message is not None:
+                payload["system"] = system_message
+            response = requests.post(
+                f"{base_url.rstrip('/')}/v1/messages",
+                headers={"Content-Type": "application/json", "X-Api-Key": self.api_key},
+                json=payload,
+                timeout=30,
+            )
+            response.raise_for_status()
+            content = response.json().get("content", [])
+            thought = "".join(
+                block.get("text", "") for block in content if block.get("type") == "text"
+            )
+        else:
+            client = OpenAI(api_key=self.api_key, base_url=base_url)
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=history,
+                temperature=1.0,
+            )
+            thought = response.choices[0].message.content if response is not None else None
+        if not thought:
+            raise provider_error("empty_response", self.error_context())
+        if verbose:
+            print(thought)
+        return thought
 
     def dsk_deepseek(self, history, verbose=False):
         """
@@ -506,35 +427,16 @@ class Provider:
         For free api. Api key should be set to DSK_DEEPSEEK_API_KEY
         This is an unofficial provider, you'll have to find how to set it up yourself.
         """
-        from dsk.api import (
-            DeepSeekAPI,
-            AuthenticationError,
-            RateLimitError,
-            NetworkError,
-            CloudflareError,
-            APIError
-        )
+        from dsk.api import DeepSeekAPI
         thought = ""
         message = '\n---\n'.join([f"{msg['role']}: {msg['content']}" for msg in history])
 
-        try:
-            api = DeepSeekAPI(self.api_key)
-            chat_id = api.create_chat_session()
-            for chunk in api.chat_completion(chat_id, message):
-                if chunk['type'] == 'text':
-                    thought += chunk['content']
-            return thought
-        except AuthenticationError as e:
-            raise AuthenticationError("Authentication failed. Please check your token.") from e
-        except RateLimitError as e:
-            raise RateLimitError("Rate limit exceeded. Please wait before making more requests.") from e
-        except CloudflareError as e:
-            raise CloudflareError(f"Cloudflare protection encountered: {str(e)}") from e
-        except NetworkError as e:
-            raise NetworkError("Network error occurred. Check your internet connection.") from e
-        except APIError as e:
-            raise APIError(f"API error occurred: {str(e)}") from e
-        return None
+        api = DeepSeekAPI(self.api_key)
+        chat_id = api.create_chat_session()
+        for chunk in api.chat_completion(chat_id, message):
+            if chunk['type'] == 'text':
+                thought += chunk['content']
+        return thought
 
     def litellm_fn(self, history, verbose=False):
         """
@@ -543,33 +445,27 @@ class Provider:
         Vertex AI, Groq, Together, Ollama, etc.) based on model prefix.
         See https://docs.litellm.ai/docs/providers
         """
-        try:
-            import litellm
-        except ImportError as e:
-            raise ImportError("litellm is not installed. Install with: pip install litellm") from e
+        import litellm
 
         if self.is_local:
-            raise Exception("LiteLLM is not available for local use. Change config.ini")
+            raise provider_error("local_unsupported", self.error_context())
 
         api_key = os.getenv("LITELLM_API_KEY", None)
 
-        try:
-            call_kwargs = {
-                "model": self.model,
-                "messages": history,
-                "drop_params": True,
-            }
-            if api_key:
-                call_kwargs["api_key"] = api_key
-            response = litellm.completion(**call_kwargs)
-            if response is None:
-                raise Exception("LiteLLM response is empty.")
-            thought = response.choices[0].message.content
-            if verbose:
-                print(thought)
-            return thought
-        except Exception as e:
-            raise Exception(f"LiteLLM API error: {str(e)}") from e
+        call_kwargs = {
+            "model": self.model,
+            "messages": history,
+            "drop_params": True,
+        }
+        if api_key:
+            call_kwargs["api_key"] = api_key
+        response = litellm.completion(**call_kwargs)
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
 
     def test_fn(self, history, verbose=True):
         """

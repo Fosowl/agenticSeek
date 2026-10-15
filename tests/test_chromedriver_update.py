@@ -26,6 +26,16 @@ from sources.browser import get_chromedriver_version, is_chromedriver_compatible
 class TestChromedriverVersionCheck(unittest.TestCase):
     """Test suite for ChromeDriver version checking and auto-update logic."""
 
+    def setUp(self):
+        # ambient CHROME_EXECUTABLE_PATH would change which browser version
+        # is_chromedriver_compatible compares against
+        self._override = os.environ.pop("CHROME_EXECUTABLE_PATH", None)
+
+    def tearDown(self):
+        if self._override is not None:
+            os.environ["CHROME_EXECUTABLE_PATH"] = self._override
+
+
     @patch('sources.browser.subprocess.run')
     def test_get_chromedriver_version_success(self, mock_run):
         """Test extracting major version from chromedriver --version output."""
@@ -76,6 +86,21 @@ class TestChromedriverVersionCheck(unittest.TestCase):
         mock_chrome_ver.return_value = "125.0.6422.78"
         mock_driver_ver.return_value = ""
         self.assertTrue(is_chromedriver_compatible("/usr/bin/chromedriver"))
+
+    @patch('sources.browser.subprocess.run')
+    def test_override_browser_version_drives_compatibility(self, mock_run):
+        """With CHROME_EXECUTABLE_PATH set, that binary's version decides."""
+        with patch.dict(os.environ, {"CHROME_EXECUTABLE_PATH": sys.executable}):
+            mock_run.side_effect = [
+                MagicMock(stdout="Brave Browser 155.0.8059.40\n"),   # browser --version
+                MagicMock(stdout="ChromeDriver 155.0.7418.0\n"),      # driver --version
+            ]
+            self.assertTrue(is_chromedriver_compatible("/usr/bin/chromedriver"))
+            mock_run.side_effect = [
+                MagicMock(stdout="Brave Browser 155.0.8059.40\n"),
+                MagicMock(stdout="ChromeDriver 125.0.6422.78\n"),
+            ]
+            self.assertFalse(is_chromedriver_compatible("/usr/bin/chromedriver"))
 
 
 if __name__ == '__main__':

@@ -88,6 +88,9 @@ ANTHROPIC_API_KEY='optional'
 - **OLLAMA_PORT**: Ollama servisi için port numarası.
 - **LM_STUDIO_PORT**: LM Studio servisi için port numarası.
 - **CUSTOM_ADDITIONAL_LLM_PORT**: Ek özel LLM servisi için port.
+- **AGENTICSEEK_API_TOKEN** (isteğe bağlı): Web arayüzünün backend API'sine göndermesi gereken token. Ayarlanmazsa backend ilk başlatmada bir tane üretir ve sonra yeniden kullanır.
+- **AGENTICSEEK_ALLOWED_HOSTS** (isteğe bağlı): Backend'in yanıt verdiği ek host adları/IP'ler, virgülle ayrılmış (varsayılan: yalnızca `localhost` ve `127.0.0.1`). Yalnızca backend'e bir LAN IP'si veya host adıyla erişiyorsanız, `REACT_APP_BACKEND_URL` ile birlikte gereklidir (örn. `192.168.1.100`).
+- **AGENTICSEEK_EXEC_UID** (Docker): Ajan komutları bu ayrıcalıksız uid ile çalışır. `start_services.sh` bunu `WORK_DIR` sahibine ayarlar. Eski bir sürümden yükseltme yapan Linux kullanıcılarının bir kez `sudo chown -R $(id -u) "$WORK_DIR"` çalıştırması gerekebilir.
 
 **API anahtarları, LLM'yi yerel olarak çalıştırmayı tercih eden kullanıcılar için tamamen isteğe bağlıdır. Bu projenin birincil amacı da budur. Yeterli donanımınız varsa boş bırakın.**
 
@@ -167,6 +170,8 @@ languages = en zh # Dil listesi, metinden sese varsayılan olarak listedeki ilk 
 [BROWSER]
 headless_browser = True # CLI modunda değilseniz değiştirmeyin.
 stealth_mode = True # Tarayıcı algılamasını azaltmak için gizli selenium kullanır
+import_user_profile = False # True: kendi tarayıcınızdaki oturumları ajan tarayıcısına kopyalar (önce o tarayıcıyı kapatın)
+import_profile_name = Default # içe aktarılacak tarayıcı profil klasörü
 ```
 
 **Uyarı**:
@@ -281,6 +286,8 @@ start start_services.cmd full # Windows
 **Uyarı:** Bu adım tüm Docker imajlarını indirip yükleyecektir, bu işlem 30 dakikaya kadar sürebilir. Servisleri başlattıktan sonra, herhangi bir mesaj göndermeden önce backend servisinin tamamen çalışır duruma gelmesini bekleyin (loglarda **backend: "GET /health HTTP/1.1" 200 OK** mesajını görmelisiniz). İlk çalıştırmada backend servisinin başlaması 5 dakika sürebilir.
 
 `http://localhost:3000/` adresine gidin ve web arayüzünü görmelisiniz.
+
+İlk açılışta web arayüzü bir **API token'ı** ister. Bunu `docker compose logs backend | grep "API token"` veya `docker exec backend cat /opt/agent-runtime/api_token` ile alın (ya da `.env` içinde `AGENTICSEEK_API_TOKEN` ile kendinizinkini belirleyin). Bir kez yapıştırın; tarayıcı hatırlar.
 
 *Servis başlatma sorun giderme:* Bu betikler başarısız olursa, Docker Engine'in çalıştığından ve Docker Compose'un (V2, `docker compose`) doğru şekilde yüklendiğinden emin olun. Hata mesajları için terminal çıktısını kontrol edin. Bkz. [SSS: AgenticSeek'i veya betiklerini çalıştırırken hata alıyorum.](#sss-sorun-giderme)
 
@@ -483,6 +490,18 @@ stealth_mode = False
     *   `headless_browser`: Otomatik tarayıcıyı görünür pencere olmadan çalıştırmak için `True` (web arayüzü veya etkileşimsiz kullanım için önerilir). Tarayıcı penceresini göstermek için `False` (CLI modu veya hata ayıklama için kullanışlıdır).
     *   `stealth_mode`: Tarayıcı otomasyonunun tespit edilmesini zorlaştıran önlemleri etkinleştirmek için `True`. Anticaptcha gibi tarayıcı eklentilerinin manuel olarak yüklenmesini gerektirebilir.
 
+    *   **`import_user_profile`**: `True` ise bir sonraki başlatmada kendi tarayıcınızdaki oturumları (çerezler, localStorage, IndexedDB) ajan tarayıcısına kopyalar; ajan, oturum açtığınız sitelerde oturum açmış olur. İçe aktarım sırasında o tarayıcı tamamen kapatılmış olmalı ve ajan aynı tarayıcı ikilisini (binary) kullanmalıdır. Günlük tarayıcınız Google Chrome değilse `CHROME_EXECUTABLE_PATH` ve `CHROME_USER_DATA_DIR` değerlerini ona yönlendirin (Brave örneği: `CHROME_EXECUTABLE_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`, `CHROME_USER_DATA_DIR="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"`). Varsayılan `False`: bu, kimlik doğrulamış oturumlarınızı (e-posta, banka) ajana teslim eder. `.browser_profile/` gitignore'dadır; gizli tutun.
+    *   **`import_profile_name`**: birden fazla profil klasörünüz varsa içe aktarılacak olan (`chrome://version` adı gösterir). Varsayılan `Default`.
+
+**Oturum içe aktarımı notları**:
+
+- Yalnızca ana makine: içe aktarım gerçek tarayıcı verinizi gerektirir; CLI modunda veya ana makinedeki `api.py` ile çalışır. agenticSeek'i Docker ile (`./start_services.sh full`) çalıştırıyorsanız `import_user_profile = False` bırakın.
+- İçe aktarım profil başına bir kez çalışır; `.browser_profile/session_import.json` işareti tekrarları engeller, `import_profile_name` değiştirmek bir sonraki başlatmada yeni içe aktarım başlatır. Elle yeniden çalıştırmak için: `uv run python -m sources.browser_session_import "<profil-adı>"` (önce shell'de iki `CHROME_*` değişkenini export edin; bu komut `config.ini` dosyasını okumaz).
+- Yeni içe aktarımdan sonra bir kez `headless_browser = False` ile başlatın: macOS anahtar zinciri onayı ve "yeni cihaz" kontrolleri görünür pencere ister.
+- Önceki ajan profiliniz `.browser_profile/chrome_data.bak-<tarih>` konumunda tutulur; yedekler asla otomatik silinmez.
+- Kopya; kayıtlı şifreleri (`Login Data`), otomatik doldurma verilerini (`Web Data`) ve çerezleri içerir; bu yüzden ajan bu sitelerde sizin adınıza hareket edebilir. `is_local = False` iken okuduğu sayfa içeriği de bulut model sağlayıcınıza gönderilir.
+- Passkey'ler asla aktarılmaz; bazı katı siteler (bazı bankalar) ajan tarayıcısında yeniden giriş isteyebilir. Kendi tarayıcınızın artık çözemeyeceği oturumlar da aktarılmaz.
+
 Bu bölüm desteklenen LLM sağlayıcı türlerini özetler. `config.ini` dosyasında yapılandırın.
 
 **Yerel Sağlayıcılar (Kendi Donanımınızda Çalışır):**
@@ -505,6 +524,15 @@ Bu bölüm desteklenen LLM sağlayıcı türlerini özetler. `config.ini` dosyas
 | `togetherAI`                  | `False`    | TogetherAI API'si üzerinden çeşitli açık modelleri kullanın.    | [API ile çalıştırma kurulumu](#api-ile-çalıştırma-kurulumu) |
 
 ---
+## Güvenlik modeli
+
+- Backend API'si bir token gerektirir (`AGENTICSEEK_API_TOKEN`, ayarlanmazsa otomatik üretilir). Yalnızca `/health` herkese açıktır.
+- `AGENTICSEEK_ALLOWED_HOSTS` içine host eklemediğiniz sürece backend yalnızca `localhost`/`127.0.0.1` adreslerine yanıt verir.
+- Docker'da ajanın çalıştırdığı kod ayrıcalıksız bir kullanıcı olarak çalışır ve API anahtarları/token'lar/sırlar ortamından kaldırılır. Üretilen betikler artık sağlayıcı API anahtarlarını ortam değişkenlerinden göremez; bir betiğin ihtiyacı varsa anahtarı açıkça verin.
+- Backend konteyneri, ajan kodunun loopback'e erişimini engellemek için `NET_ADMIN` yeteneğine ihtiyaç duyar (`docker-compose.yml` içinde ayarlı); bu olmadan entrypoint bir WARNING yazdırır ve ajan kodu chromedriver/Chrome DevTools'a erişebilir.
+- Bu kod yine de `WORK_DIR` içindeki her şeyi okuyup yazabilir ve ağı kullanabilir: yalnızca açığa çıkmasında sakınca olmayan klasörleri bağlayın.
+- `safe_mode` (varsayılan olarak açık) en iyi çabayla çalışan bir komut filtresidir, sandbox değildir.
+
 ## Sorun Giderme
 
 Sorunlarla karşılaşırsanız bu bölüm rehberlik sağlar.

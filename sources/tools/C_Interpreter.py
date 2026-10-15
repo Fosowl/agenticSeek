@@ -7,6 +7,7 @@ if __name__ == "__main__": # if running as a script for individual testing
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sources.tools.tools import Tools
+from sources.tools.sandbox import hand_over_path, subprocess_isolation
 
 class CInterpreter(Tools):
     """
@@ -31,18 +32,21 @@ class CInterpreter(Tools):
         exec_extension = ".exe" if os.name == "nt" else ""  # Windows uses .exe, Linux/Unix does not
         
         with tempfile.TemporaryDirectory() as tmpdirname:
+            hand_over_path(tmpdirname)
             source_file = os.path.join(tmpdirname, "temp.c")
             exec_file = os.path.join(tmpdirname, "temp") + exec_extension
             with open(source_file, 'w') as f:
                 f.write(code)
 
             try:
+                isolation = subprocess_isolation(self.work_dir)
                 compile_command = ["gcc", source_file, "-o", exec_file]
                 compile_result = subprocess.run(
                     compile_command,
                     capture_output=True,
                     text=True,
-                    timeout=60
+                    timeout=60,
+                    **isolation
                 )
 
                 if compile_result.returncode != 0:
@@ -53,7 +57,8 @@ class CInterpreter(Tools):
                     run_command,
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
+                    **isolation
                 )
 
                 if run_result.returncode != 0:

@@ -358,7 +358,7 @@ class BrowserAgent(Agent):
         complete = False
 
         animate_thinking(f"Thinking...", color="status")
-        mem_begin_idx = self.memory.push('user', self.search_prompt(user_prompt))
+        self.memory.push('user', self.search_prompt(user_prompt))
         ai_prompt, reasoning = await self.llm_request()
         if Action.REQUEST_EXIT.value in ai_prompt:
             pretty_print(f"Web agent requested exit.\n{reasoning}\n\n{ai_prompt}", color="failure")
@@ -436,7 +436,7 @@ class BrowserAgent(Agent):
 
         pretty_print("Exited navigation, starting to summarize finding...", color="status")
         prompt = self.conclude_prompt(user_prompt)
-        mem_last_idx = self.memory.push('user', prompt)
+        self.memory.push('user', prompt)
         self.status_message = "Summarizing findings..."
         answer, reasoning = await self.llm_request()
         pretty_print(answer, color="output")

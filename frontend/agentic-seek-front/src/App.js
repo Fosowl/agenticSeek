@@ -4,6 +4,9 @@ import axios from "axios";
 import "./App.css";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ResizableLayout } from "./components/ResizableLayout";
+import { FileExplorer } from "./components/FileExplorer";
+import { TokenPrompt } from "./components/TokenPrompt";
+import { clearToken, getToken, onAuthRequired, saveToken } from "./apiAuth";
 import faviconPng from "./logo.png";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -19,7 +22,17 @@ function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
+  // null, or why the token prompt is open: "required", "rejected", "change".
+  const [tokenPrompt, setTokenPrompt] = useState(null);
+  // Files picked with the paperclip, uploaded when the query is sent.
+  const [attachments, setAttachments] = useState([]);
+  const fileInputRef = useRef(null);
+  const authRequired = tokenPrompt === "required" || tokenPrompt === "rejected";
   const messagesEndRef = useRef(null);
+  // Normalized texts of agent answers already shown. A ref (not `messages`)
+  // because polls overlap when the backend is slow: every in-flight response
+  // must see answers appended by responses that resolved before it.
+  const seenAnswersRef = useRef(new Set());
 
   const fetchLatestAnswer = useCallback(async () => {
     try {
@@ -31,39 +44,46 @@ function App() {
         return;
       }
       const normalizedNewAnswer = normalizeAnswer(data.answer);
-      const answerExists = messages.some(
-        (msg) => normalizeAnswer(msg.content) === normalizedNewAnswer
-      );
-      if (!answerExists) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "agent",
-            content: data.answer,
-            reasoning: data.reasoning,
-            agentName: data.agent_name,
-            status: data.status,
-            uid: data.uid,
-          },
-        ]);
-        setStatus(data.status);
-        scrollToBottom();
-      } else {
-        console.log("Duplicate answer detected, skipping:", data.answer);
+      if (seenAnswersRef.current.has(normalizedNewAnswer)) {
+        return;
       }
+      seenAnswersRef.current.add(normalizedNewAnswer);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "agent",
+          content: data.answer,
+          reasoning: data.reasoning,
+          agentName: data.agent_name,
+          status: data.status,
+          uid: data.uid,
+        },
+      ]);
+      setStatus(data.status);
+      scrollToBottom();
     } catch (error) {
       console.error("Error fetching latest answer:", error);
     }
-  }, [messages]);
+  }, []);
+
+  useEffect(
+    () =>
+      onAuthRequired(({ tokenRejected }) =>
+        setTokenPrompt(tokenRejected ? "rejected" : "required")
+      ),
+    []
+  );
 
   useEffect(() => {
     const intervalId = setInterval(() => {
       checkHealth();
+      // /health is public; the other calls would only 401 until a token is saved.
+      if (authRequired) return;
       fetchLatestAnswer();
       fetchScreenshot();
     }, 3000);
     return () => clearInterval(intervalId);
-  }, [fetchLatestAnswer]);
+  }, [fetchLatestAnswer, authRequired]);
 
   const checkHealth = async () => {
     try {
@@ -79,12 +99,10 @@ function App() {
   const fetchScreenshot = async () => {
     try {
       const timestamp = new Date().getTime();
-      const res = await axios.get(
-        `${BACKEND_URL}/screenshots/updated_screen.png?timestamp=${timestamp}`,
-        {
-          responseType: "blob",
-        }
-      );
+      const res = await axios.get(`${BACKEND_URL}/screenshot`, {
+        params: { timestamp },
+        responseType: "blob",
+      });
       console.log("Screenshot fetched successfully");
       const imageUrl = URL.createObjectURL(res.data);
       setResponseData((prev) => {
@@ -156,6 +174,40 @@ function App() {
     }
   };
 
+  const handleAttach = (e) => {
+    const picked = Array.from(e.target.files || []);
+    setAttachments((prev) => [...prev, ...picked]);
+    // Reset so picking the same file again fires onChange.
+    e.target.value = "";
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Returns the workspace paths of the saved files, or null on failure.
+  const uploadAttachments = async (files) => {
+    if (files.length === 0) return [];
+    const form = new FormData();
+    files.forEach((file) => form.append("files", file));
+    try {
+      const res = await axios.post(`${BACKEND_URL}/files/upload`, form);
+      return res.data.paths;
+    } catch (err) {
+      console.error("Upload error:", err);
+      const detail = err.response?.data?.detail || "Unable to upload files.";
+      setMessages((prev) => [
+        ...prev,
+        { type: "error", content: `Upload failed: ${detail}` },
+      ]);
+      return null;
+    }
+  };
+
+  // The agent learns the saved paths from a <files> tag after the prompt.
+  const withFilesTag = (text, paths) =>
+    paths.length > 0 ? `${text} <files>${paths.join(", ")}</files>` : text;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     checkHealth();
@@ -163,15 +215,27 @@ function App() {
       console.log("Empty query");
       return;
     }
-    setMessages((prev) => [...prev, { type: "user", content: query }]);
     setIsLoading(true);
     setError(null);
+    // On upload failure keep the typed query and the attachments for a retry.
+    const paths = await uploadAttachments(attachments);
+    if (paths === null) {
+      setIsLoading(false);
+      return;
+    }
+    setMessages((prev) => [
+      ...prev,
+      { type: "user", content: query, files: attachments.map((file) => file.name) },
+    ]);
+    setAttachments([]);
 
+    const fullQuery = withFilesTag(query, paths);
+    let retryQuery = "";
     try {
-      console.log("Sending query:", query);
+      console.log("Sending query:", fullQuery);
       setQuery("waiting for response...");
       const res = await axios.post(`${BACKEND_URL}/query`, {
-        query,
+        query: fullQuery,
         tts_enabled: false,
       });
       setQuery("Enter your query...");
@@ -185,10 +249,12 @@ function App() {
         ...prev,
         { type: "error", content: "Error: Unable to get a response." },
       ]);
+      // Files are already saved; a retry resends their tag.
+      retryQuery = fullQuery;
     } finally {
       console.log("Query completed");
       setIsLoading(false);
-      setQuery("");
+      setQuery(retryQuery);
     }
   };
 
@@ -198,6 +264,18 @@ function App() {
     } catch (err) {
       setError("Browser not in use");
     }
+  };
+
+  const handleSaveToken = (token) => {
+    saveToken(token);
+    setTokenPrompt(null);
+    // Try the token right away: a 401 reopens the prompt as "rejected".
+    fetchLatestAnswer();
+  };
+
+  const handleClearToken = () => {
+    clearToken();
+    setTokenPrompt(null);
   };
 
   return (
@@ -234,6 +312,24 @@ function App() {
             </svg>
             <span className="action-text">GitHub</span>
           </a>
+          <button
+            type="button"
+            className="action-button"
+            onClick={() => setTokenPrompt("change")}
+            aria-label="Change API token"
+            title="Change API token"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 7a4 4 0 1 1-3.87 5H9v2H7v2H4v-3l5.13-5.13A4 4 0 0 1 15 7z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="action-text">Token</span>
+          </button>
           <div>
             <ThemeToggle />
           </div>
@@ -287,6 +383,13 @@ function App() {
                     </div>
                     <div className="message-content">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      {msg.files?.length > 0 && (
+                        <ul className="message-files">
+                          {msg.files.map((name, fileIndex) => (
+                            <li key={fileIndex}>📎 {name}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 ))
@@ -299,6 +402,25 @@ function App() {
                 System offline. Deploy backend first.
               </p>
             )}
+            {attachments.length > 0 && (
+              <ul className="attachment-list">
+                {attachments.map((file, index) => (
+                  <li key={`${file.name}-${index}`} className="attachment-chip">
+                    <span className="attachment-name" title={file.name}>
+                      {file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      disabled={isLoading}
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <form onSubmit={handleSubmit} className="input-form">
               <input
                 type="text"
@@ -308,6 +430,31 @@ function App() {
                 disabled={isLoading}
               />
               <div className="action-buttons">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={handleAttach}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="icon-button attach-button"
+                  aria-label="Attach files"
+                  title="Attach files"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -364,10 +511,16 @@ function App() {
               >
                 Browser View
               </button>
+              <button
+                className={currentView === "files" ? "active" : ""}
+                onClick={() => setCurrentView("files")}
+              >
+                Files
+              </button>
             </div>
-            <div className="content">
+            <div className={`content ${currentView === "files" ? "content-files" : ""}`}>
               {error && <p className="error">{error}</p>}
-              {currentView === "blocks" ? (
+              {currentView === "blocks" && (
                 <div className="blocks">
                   {responseData &&
                   responseData.blocks &&
@@ -393,7 +546,8 @@ function App() {
                     </div>
                   )}
                 </div>
-              ) : (
+              )}
+              {currentView === "screenshot" && (
                 <div className="screenshot">
                   <img
                     src={responseData?.screenshot || "placeholder.png"}
@@ -406,10 +560,26 @@ function App() {
                   />
                 </div>
               )}
+              {/* Kept mounted so the expanded tree and open file survive tab switches. */}
+              <div hidden={currentView !== "files"} className="files-pane">
+                <FileExplorer
+                  backendUrl={BACKEND_URL}
+                  active={currentView === "files" && !authRequired}
+                />
+              </div>
             </div>
           </div>
         </ResizableLayout>
       </main>
+      {tokenPrompt && (
+        <TokenPrompt
+          reason={tokenPrompt}
+          hasToken={Boolean(getToken())}
+          onSave={handleSaveToken}
+          onClear={handleClearToken}
+          onCancel={() => setTokenPrompt(null)}
+        />
+      )}
     </div>
   );
 }

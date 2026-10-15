@@ -32,6 +32,13 @@ def get_color_map():
         }
     return color_map
 
+def stop_animation():
+    """Stop the thinking spinner (if any) and wait until its line is cleared."""
+    thinking_event.set()
+    if current_animation_thread and current_animation_thread.is_alive():
+        current_animation_thread.join()
+    thinking_event.clear()
+
 def pretty_print(text, color="info", no_newline=False):
     """
     Print text with color formatting.
@@ -48,11 +55,8 @@ def pretty_print(text, color="info", no_newline=False):
             - "output": Cyan
             - "default": Black (Windows only)
     """
-    thinking_event.set()
-    if current_animation_thread and current_animation_thread.is_alive():
-        current_animation_thread.join()
-    thinking_event.clear()
-    
+    stop_animation()
+
     color_map = get_color_map()
     if color not in color_map:
         color = "info"
@@ -65,12 +69,9 @@ def animate_thinking(text, color="status", duration=120):
     Color are the same as pretty_print.
     """
     global current_animation_thread
-    
-    thinking_event.set()
-    if current_animation_thread and current_animation_thread.is_alive():
-        current_animation_thread.join()
-    thinking_event.clear()
-    
+
+    stop_animation()
+
     def _animate():
         color_map = {
             "success": (Fore.GREEN, "green"),

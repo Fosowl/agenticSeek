@@ -47,9 +47,9 @@ class TestSafeMode(unittest.TestCase):
         self._write_config("safe_mode = False\n")
         self.assertFalse(_SafeModeTool().safe_mode)
 
-    def test_safe_mode_defaults_false_when_key_absent(self):
+    def test_safe_mode_defaults_true_when_key_absent(self):
         self._write_config("")
-        self.assertFalse(_SafeModeTool().safe_mode)
+        self.assertTrue(_SafeModeTool().safe_mode)
 
 
 if __name__ == "__main__":

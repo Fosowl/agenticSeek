@@ -1,0 +1,224 @@
+.file-explorer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  height: 35%;
+  min-height: 6rem;
+  max-height: 80%;
+  resize: vertical;
+  overflow: hidden;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.file-tree-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.file-tree-entries {
+  flex: 1;
+  overflow: auto;
+  padding: 0.25rem 0;
+}
+
+.file-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.2rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.file-tree-item:hover {
+  background: var(--secondary);
+}
+
+.file-tree-item.selected {
+  background: var(--background);
+  font-weight: 600;
+}
+
+.file-tree-caret {
+  width: 0.75rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.file-tree-icon {
+  flex-shrink: 0;
+}
+
+.file-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tree-size {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.file-tree-message {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+.file-tree-error {
+  color: var(--destructive);
+}
+
+.file-explorer-button {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.file-explorer-button:hover {
+  background: var(--secondary);
+}
+
+.file-viewer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.file-viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.file-viewer-path {
+  font-family: "JetBrains Mono", "Fira Code", "Menlo", monospace;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-viewer-size {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.file-viewer-note {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.file-viewer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.file-text {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-family: "JetBrains Mono", "Fira Code", "Menlo", monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--foreground);
+  white-space: pre;
+  tab-size: 4;
+}
+
+.file-markdown {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+.file-markdown h1,
+.file-markdown h2,
+.file-markdown h3 {
+  margin: 1rem 0 0.5rem;
+}
+
+.file-markdown p,
+.file-markdown ul,
+.file-markdown ol,
+.file-markdown pre {
+  margin-bottom: 0.75rem;
+}
+
+.file-markdown ul,
+.file-markdown ol {
+  padding-left: 1.5rem;
+}
+
+.file-markdown pre,
+.file-markdown code {
+  font-family: "JetBrains Mono", "Fira Code", "Menlo", monospace;
+  font-size: 0.8rem;
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+.file-markdown pre {
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.file-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  min-height: 100%;
+  background-image: repeating-conic-gradient(var(--muted) 0% 25%, transparent 0% 50%);
+  background-size: 16px 16px;
+}
+
+.file-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

@@ -2,9 +2,10 @@
 Consistent browser identity for AgenticSeek's stealth layer.
 
 A BrowserIdentity describes one complete, internally consistent browser
-persona: user agent, platform, client hints, screen, WebGL hardware, CPU
-class, languages. Every layer (chrome flags, CDP overrides, injected JS)
-derives from the same instance so they can never contradict each other.
+persona: user agent, platform, client hints, screen, CPU class, languages.
+Every layer (chrome flags, CDP overrides, injected JS) derives from the same
+instance so they can never contradict each other. GPU and canvas output stay
+real: Web Workers expose them unspoofed, so any main-thread lie is visible.
 
 The identity is persisted on disk and reused across runs as long as the
 installed Chrome major version still matches: a stable fingerprint is far
@@ -29,7 +30,7 @@ DEFAULT_CHROME_MAJOR = 125
 # ---------------------------------------------------------------------------
 # Device profiles.
 # Every entry is internally consistent: OS <-> navigator.platform <->
-# client-hints platform <-> screen <-> WebGL hardware <-> CPU class.
+# client-hints platform <-> screen <-> CPU class.
 # WebIDL values below mimic what a real Chrome of that class reports.
 # ---------------------------------------------------------------------------
 
@@ -44,14 +45,6 @@ DEVICE_PROFILES = [
         "bitness": "64",
         "screen": {"width": 1920, "height": 1080, "avail_width": 1920, "avail_height": 1040,
                     "avail_left": 0, "avail_top": 0},
-        "webgl": {
-            "vendor": "Google Inc. (NVIDIA)",
-            "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "unmasked_vendor": "NVIDIA",
-            "unmasked_renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
-            "shading_language_version": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
-        },
         "hardware_concurrency": 12,
         "device_memory": 8,
     },
@@ -65,14 +58,6 @@ DEVICE_PROFILES = [
         "bitness": "64",
         "screen": {"width": 1920, "height": 1080, "avail_width": 1920, "avail_height": 1040,
                     "avail_left": 0, "avail_top": 0},
-        "webgl": {
-            "vendor": "Google Inc. (Intel)",
-            "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E92) Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "unmasked_vendor": "Intel",
-            "unmasked_renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E92) Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
-            "shading_language_version": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
-        },
         "hardware_concurrency": 8,
         "device_memory": 8,
     },
@@ -83,17 +68,9 @@ DEVICE_PROFILES = [
         "client_hint_platform": "macOS",
         "platform_version": "14.6.1",
         "architecture": "arm",
-        "bitness": "",
+        "bitness": "64",
         "screen": {"width": 1728, "height": 1117, "avail_width": 1728, "avail_height": 1092,
                     "avail_left": 0, "avail_top": 25},
-        "webgl": {
-            "vendor": "Google Inc. (Apple)",
-            "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
-            "unmasked_vendor": "Google Inc. (Apple)",
-            "unmasked_renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
-            "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
-            "shading_language_version": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
-        },
         "hardware_concurrency": 10,
         "device_memory": 8,
     },
@@ -104,17 +81,9 @@ DEVICE_PROFILES = [
         "client_hint_platform": "macOS",
         "platform_version": "14.5.0",
         "architecture": "arm",
-        "bitness": "",
+        "bitness": "64",
         "screen": {"width": 1470, "height": 956, "avail_width": 1470, "avail_height": 931,
                     "avail_left": 0, "avail_top": 25},
-        "webgl": {
-            "vendor": "Google Inc. (Apple)",
-            "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
-            "unmasked_vendor": "Google Inc. (Apple)",
-            "unmasked_renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
-            "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
-            "shading_language_version": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
-        },
         "hardware_concurrency": 8,
         "device_memory": 8,
     },
@@ -128,14 +97,6 @@ DEVICE_PROFILES = [
         "bitness": "64",
         "screen": {"width": 1920, "height": 1080, "avail_width": 1920, "avail_height": 1048,
                     "avail_left": 0, "avail_top": 0},
-        "webgl": {
-            "vendor": "Google Inc. (Intel)",
-            "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics (CML GT2), OpenGL 4.6 (Core Profile) Mesa 24.0.9)",
-            "unmasked_vendor": "Google Inc. (Intel)",
-            "unmasked_renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics (CML GT2), OpenGL 4.6 (Core Profile) Mesa 24.0.9",
-            "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
-            "shading_language_version": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
-        },
         "hardware_concurrency": 8,
         "device_memory": 8,
     },
@@ -148,8 +109,40 @@ UA_TEMPLATES = {
     "linux": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version} Safari/537.36",
 }
 
-# Real Chrome reports vendor "Google Inc." on every desktop platform.
-NAV_VENDOR = "Google Inc."
+# Chromium's GREASE brand inputs (components/embedder_support/user_agent_utils.cc).
+# The major version seeds the brand name, its version and the brand order.
+GREASE_CHARS = [" ", "(", ":", "-", ".", "/", ")", ";", "=", "?", "_"]
+GREASE_VERSIONS = ["8", "99", "24"]
+BRAND_ORDERS = [(0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0)]
+FULL_VERSION_SUFFIX = ".0.0.0"
+
+
+def chrome_brands(chrome_major: int, version: str, full: bool = False) -> list:
+    """
+    Build the client-hint brand list exactly as Chromium does.
+    BrowserIdentity calls this for the CDP user-agent metadata.
+    It places the GREASE brand, "Chromium" and "Google Chrome" in the order
+    that Chromium derives from the major version.
+
+    Args:
+        chrome_major (int): Chrome major version, from the identity.
+        version (str): version string for the real brands (major or full).
+        full (bool): True for the fullVersionList form ("8.0.0.0").
+    Returns:
+        list[dict]: [{"brand": str, "version": str}, ...] with 3 entries.
+    """
+    grease_brand = (f"Not{GREASE_CHARS[chrome_major % len(GREASE_CHARS)]}A"
+                    f"{GREASE_CHARS[(chrome_major + 1) % len(GREASE_CHARS)]}Brand")
+    grease_version = GREASE_VERSIONS[chrome_major % len(GREASE_VERSIONS)]
+    if full:
+        grease_version += FULL_VERSION_SUFFIX
+    order = BRAND_ORDERS[chrome_major % len(BRAND_ORDERS)]
+    brands = [None, None, None]
+    brands[order[0]] = {"brand": grease_brand, "version": grease_version}
+    brands[order[1]] = {"brand": "Chromium", "version": version}
+    brands[order[2]] = {"brand": "Google Chrome", "version": version}
+    return brands
+
 
 _LOCALE_MAP = {
     "en": "en-US", "zh": "zh-CN", "fr": "fr-FR", "de": "de-DE", "es": "es-ES",
@@ -215,7 +208,7 @@ class BrowserIdentity:
     """One consistent browser persona; all stealth layers derive from it."""
 
     def __init__(self, profile: dict, chrome_major: int, chrome_full_version: str,
-                 languages: list, timezone: str | None, seed: int):
+                 languages: list, timezone: str | None):
         self.label = profile["label"]
         self.os = profile["os"]
         self.navigator_platform = profile["navigator_platform"]
@@ -224,12 +217,10 @@ class BrowserIdentity:
         self.architecture = profile["architecture"]
         self.bitness = profile["bitness"]
         self.screen = dict(profile["screen"])
-        self.webgl = dict(profile["webgl"])
         self.hardware_concurrency = profile["hardware_concurrency"]
         self.device_memory = profile["device_memory"]
         self.languages = list(languages)
         self.timezone = timezone
-        self.seed = seed
         self.chrome_major = chrome_major
         self.chrome_full_version = chrome_full_version
         self.created_at = datetime.datetime.now().isoformat(timespec="seconds")
@@ -263,17 +254,15 @@ class BrowserIdentity:
         # keep the window inside the spoofed available screen (taskbar/dock)
         return (self.screen["width"], self.screen["avail_height"])
 
-    def _brands(self, full: bool = False):
-        version = self.chrome_full_version if full else str(self.chrome_major)
-        brand_names = [("Not.A/Brand", "99"), ("Chromium", version),
-                       ("Google Chrome", version)]
-        return [{"brand": b, "version": v} for b, v in brand_names]
-
     def to_cdp_user_agent_metadata(self) -> dict:
-        """CDP UserAgentMetadata: keeps HTTP client hints consistent with the JS layer."""
+        """
+        CDP UserAgentMetadata for Network.setUserAgentOverride.
+        Chrome serves it both as the HTTP sec-ch-ua-* headers and through the
+        real navigator.userAgentData (page and workers), so no JS fake is needed.
+        """
         return {
-            "brands": self._brands(),
-            "fullVersionList": self._brands(full=True),
+            "brands": chrome_brands(self.chrome_major, str(self.chrome_major)),
+            "fullVersionList": chrome_brands(self.chrome_major, self.chrome_full_version, full=True),
             "fullVersion": self.chrome_full_version,
             "platform": self.client_hint_platform,
             "platformVersion": self.platform_version,
@@ -282,34 +271,14 @@ class BrowserIdentity:
             "mobile": False,
             "bitness": self.bitness,
             "wow64": False,
+            "formFactors": ["Desktop"],
         }
 
     def to_js(self) -> dict:
         """The JSON embedded into spoofing.js; key names match the script."""
         return {
-            "navigator": {
-                "platform": self.navigator_platform,
-                "vendor": NAV_VENDOR,
-                "languages": self.languages,
-                "hardwareConcurrency": self.hardware_concurrency,
-                "deviceMemory": self.device_memory,
-                "userAgentData": {
-                    "brands": self._brands(),
-                    "mobile": False,
-                    "platform": self.client_hint_platform,
-                    "highEntropy": {
-                        "architecture": self.architecture,
-                        "bitness": self.bitness or "64",
-                        "model": "",
-                        "platformVersion": self.platform_version,
-                        "uaFullVersion": self.chrome_full_version,
-                        "fullVersionList": self._brands(full=True),
-                    },
-                },
-            },
+            "navigator": {"languages": self.languages},
             "screen": self.screen,
-            "webgl": self.webgl,
-            "seed": self.seed,
         }
 
     # ------------------------------------------------------------ persistence
@@ -322,7 +291,6 @@ class BrowserIdentity:
             "chrome_full_version": self.chrome_full_version,
             "languages": self.languages,
             "timezone": self.timezone,
-            "seed": self.seed,
             "created_at": self.created_at,
         }
 
@@ -337,7 +305,6 @@ class BrowserIdentity:
             chrome_full_version=state.get("chrome_full_version") or f"{state['chrome_major']}.0.0.0",
             languages=list(state.get("languages") or ["en-US", "en"]),
             timezone=state.get("timezone"),
-            seed=int(state.get("seed") or random.getrandbits(31)),
         )
 
 
@@ -420,7 +387,6 @@ def load_or_create_identity(state_file: str | None = None,
             chrome_full_version=chrome_full_version,
             languages=languages,
             timezone=host_iana_timezone(),
-            seed=random.getrandbits(31),
         )
         try:
             _atomic_write_json(state_file, identity.to_state())

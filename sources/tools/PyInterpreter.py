@@ -8,6 +8,7 @@ if __name__ == "__main__": # if running as a script for individual testing
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sources.tools.tools import Tools
+from sources.tools.sandbox import subprocess_isolation
 
 class PyInterpreter(Tools):
     """
@@ -62,7 +63,8 @@ class PyInterpreter(Tools):
                 cwd=self.work_dir,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                **subprocess_isolation(self.work_dir)
             )
         except subprocess.TimeoutExpired:
             self.logger.error(f"Code execution timed out after {timeout} seconds.")

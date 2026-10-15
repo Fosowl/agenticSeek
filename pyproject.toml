@@ -36,6 +36,7 @@ dependencies = [
     "pypinyin>=0.54.0",
     "pyreadline3>=3.5.4",
     "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.20",
     "requests>=2.31.0",
     "sacremoses>=0.0.53",
     "scipy>=1.9.3",

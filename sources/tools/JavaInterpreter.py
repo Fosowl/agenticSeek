@@ -7,6 +7,7 @@ if __name__ == "__main__": # if running as a script for individual testing
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sources.tools.tools import Tools
+from sources.tools.sandbox import hand_over_path, subprocess_isolation
 
 class JavaInterpreter(Tools):
     """
@@ -29,18 +30,21 @@ class JavaInterpreter(Tools):
             return "Code rejected by user."
 
         with tempfile.TemporaryDirectory() as tmpdirname:
+            hand_over_path(tmpdirname)
             source_file = os.path.join(tmpdirname, "Main.java")
             class_dir = tmpdirname
             with open(source_file, 'w') as f:
                 f.write(code)
 
             try:
+                isolation = subprocess_isolation(self.work_dir)
                 compile_command = ["javac", "-d", class_dir, source_file]
                 compile_result = subprocess.run(
                     compile_command,
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
+                    **isolation
                 )
 
                 if compile_result.returncode != 0:
@@ -51,7 +55,8 @@ class JavaInterpreter(Tools):
                     run_command,
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
+                    **isolation
                 )
 
                 if run_result.returncode != 0:
