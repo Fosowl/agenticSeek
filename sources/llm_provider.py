@@ -36,6 +36,7 @@ class Provider:
             "together": self.together_fn,
             "dsk_deepseek": self.dsk_deepseek,
             "openrouter": self.openrouter_fn,
+            "cheaperinference": self.cheaperinference_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
             "litellm": self.litellm_fn,
@@ -44,7 +45,7 @@ class Provider:
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "cheaperinference", "anthropic", "minimax"]
         if self.provider_name not in self.available_providers:
             raise AgenticSeekError(
                 "Unknown provider",
@@ -363,6 +364,29 @@ class Provider:
         if verbose:
             print(thought)
         return thought
+
+    def cheaperinference_fn(self, history, verbose=False):
+        """
+        Use Cheaper Inference API to generate text.
+        """
+        client = OpenAI(api_key=self.api_key, base_url="https://api.cheaperinference.com/v1")
+        if self.is_local:
+            # This case should ideally not be reached if unsafe_providers is set correctly
+            # and is_local is False in config for cheaperinference
+            raise Exception("Cheaper Inference is not available for local use. Change config.ini")
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=history,
+            )
+            if response is None:
+                raise Exception("Cheaper Inference response is empty.")
+            thought = response.choices[0].message.content
+            if verbose:
+                print(thought)
+            return thought
+        except Exception as e:
+            raise Exception(f"Cheaper Inference API error: {str(e)}") from e
 
     def minimax_fn(self, history, verbose=False):
         """
