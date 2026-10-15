@@ -1,20 +1,23 @@
 import json
-from typing import List, Tuple, Type, Dict
+from typing import List, Tuple, Dict
+
 from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
-from sources.agents.code_agent import CoderAgent
-from sources.agents.file_agent import FileAgent
-from sources.agents.browser_agent import BrowserAgent
-from sources.agents.casual_agent import CasualAgent
 from sources.text_to_speech import Speech
 from sources.tools.tools import Tools
 from sources.logger import Logger
 from sources.memory import Memory
 
+SUB_AGENT_KEYS = ("coder", "file", "web", "casual")
+
+
 class PlannerAgent(Agent):
-    def __init__(self, name, prompt_path, provider, verbose=False, browser=None):
+    def __init__(self, name, prompt_path, provider, verbose=False, browser=None,
+                 personality_folder=None, casual_agent_name=None):
         """
         The planner agent is a special agent that divides and conquers the task.
+        Sub-agents are spawned per task so memory and tool state do not leak
+        between planner steps or user requests.
         """
         super().__init__(name, prompt_path, provider, verbose, None)
         self.tools = {
@@ -22,12 +25,9 @@ class PlannerAgent(Agent):
         }
         self.tools['json'].tag = "json"
         self.browser = browser
-        self.agents = {
-            "coder": CoderAgent(name, "prompts/base/coder_agent.txt", provider, verbose=False),
-            "file": FileAgent(name, "prompts/base/file_agent.txt", provider, verbose=False),
-            "web": BrowserAgent(name, "prompts/base/browser_agent.txt", provider, verbose=False, browser=browser),
-            "casual": CasualAgent(name, "prompts/base/casual_agent.txt", provider, verbose=False)
-        }
+        self.personality_folder = personality_folder or self.personality_from_prompt(prompt_path)
+        self.casual_agent_name = casual_agent_name or name
+        self._active_sub_agent = None
         self.role = "planification"
         self.type = "planner_agent"
         self.memory = Memory(self.load_prompt(prompt_path),
@@ -35,6 +35,53 @@ class PlannerAgent(Agent):
                                 memory_compression=False,
                                 model_provider=provider.get_model_name())
         self.logger = Logger("planner_agent.log")
+
+    def request_stop(self) -> None:
+        """Stop the planner and any sub-agent currently executing a task."""
+        super().request_stop()
+        if self._active_sub_agent is not None:
+            self._active_sub_agent.request_stop()
+
+    @staticmethod
+    def personality_from_prompt(prompt_path: str) -> str:
+        """Derive prompts/<personality>/ from a planner prompt path."""
+        parts = prompt_path.replace("\\", "/").split("/")
+        if len(parts) >= 3 and parts[0] == "prompts":
+            return parts[1]
+        return "base"
+
+    def supported_sub_agents(self) -> Tuple[str, ...]:
+        return SUB_AGENT_KEYS
+
+    def create_sub_agent(self, agent_key: str) -> Agent:
+        """Create a fresh sub-agent instance for a single planner task."""
+        key = agent_key.lower()
+        if key not in SUB_AGENT_KEYS:
+            raise ValueError(f"Unknown sub-agent: {agent_key}")
+
+        prompts = f"prompts/{self.personality_folder}"
+        if key == "coder":
+            from sources.agents.code_agent import CoderAgent
+            return CoderAgent("coder", f"{prompts}/coder_agent.txt", self.llm, self.verbose)
+        if key == "file":
+            from sources.agents.file_agent import FileAgent
+            return FileAgent("File Agent", f"{prompts}/file_agent.txt", self.llm, self.verbose)
+        if key == "web":
+            from sources.agents.browser_agent import BrowserAgent
+            return BrowserAgent(
+                "Browser",
+                f"{prompts}/browser_agent.txt",
+                self.llm,
+                self.verbose,
+                browser=self.browser,
+            )
+        from sources.agents.casual_agent import CasualAgent
+        return CasualAgent(
+            self.casual_agent_name,
+            f"{prompts}/casual_agent.txt",
+            self.llm,
+            self.verbose,
+        )
 
     def get_task_names(self, text: str) -> List[str]:
         """
@@ -84,7 +131,7 @@ class PlannerAgent(Agent):
                 return []
             if 'plan' in line_json:
                 for task in line_json['plan']:
-                    if task['agent'].lower() not in [ag_name.lower() for ag_name in self.agents.keys()]:
+                    if task['agent'].lower() not in SUB_AGENT_KEYS:
                         self.logger.warning(f"Agent {task['agent']} does not exist.")
                         pretty_print(f"Agent {task['agent']} does not exist.", color="warning")
                         return []
@@ -94,7 +141,7 @@ class PlannerAgent(Agent):
                             'id': task['id'],
                             'task': task['task']
                         }
-                    except:
+                    except Exception:
                         self.logger.warning("Missing field in json plan.")
                         return []
                     self.logger.info(f"Created agent {task['agent']} with task: {task['task']}")
@@ -197,7 +244,7 @@ class PlannerAgent(Agent):
         pretty_print(f"Agent {id} work {tool_success_str}.", color="success" if success else "failure")
         try:
             id_int = int(id)
-        except Exception as e:
+        except Exception:
             return agents_tasks
         if id_int == len(agents_tasks):
             next_task = "No task follow, this was the last step. If it failed add a task to recover."
@@ -242,13 +289,21 @@ class PlannerAgent(Agent):
         agent_prompt = self.make_prompt(task['task'], required_infos)
         pretty_print(f"Agent {task['agent']} started working...", color="status")
         self.logger.info(f"Agent {task['agent']} started working on {task['task']}.")
-        answer, reasoning = await self.agents[task['agent'].lower()].process(agent_prompt, None)
+
+        sub_agent = self.create_sub_agent(task['agent'])
+        self._active_sub_agent = sub_agent
+        if self.stop:
+            sub_agent.request_stop()
+        try:
+            answer, reasoning = await sub_agent.process(agent_prompt, None)
+        finally:
+            self._active_sub_agent = None
         self.last_answer = answer
         self.last_reasoning = reasoning
-        self.blocks_result = self.agents[task['agent'].lower()].blocks_result
-        agent_answer = self.agents[task['agent'].lower()].raw_answer_blocks(answer)
-        success = self.agents[task['agent'].lower()].get_success
-        self.agents[task['agent'].lower()].show_answer()
+        self.blocks_result = sub_agent.blocks_result
+        agent_answer = sub_agent.raw_answer_blocks(answer)
+        success = sub_agent.get_success
+        sub_agent.show_answer()
         pretty_print(f"Agent {task['agent']} completed task.", color="status")
         self.logger.info(f"Agent {task['agent']} finished working on {task['task']}. Success: {success}")
         agent_answer += "\nAgent succeeded with task." if success else "\nAgent failed with task (Error detected)."
@@ -279,6 +334,7 @@ class PlannerAgent(Agent):
             return "Failed to parse the tasks.", ""
         i = 0
         steps = len(agents_tasks)
+        answer = ""
         while i < steps and not self.stop:
             task_name, task = agents_tasks[i][0], agents_tasks[i][1]
             self.status_message = "Starting agents..."
