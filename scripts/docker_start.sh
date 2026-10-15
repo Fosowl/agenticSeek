@@ -66,6 +66,13 @@ start_xvfb() {
         return
     fi
     if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
+        # No server answers on $DISPLAY, so any lock/socket is stale: docker
+        # stop SIGKILLs Xvfb and leaves them in the container layer. After a
+        # restart the lock's PID is recycled by a live process and Xvfb aborts
+        # with "Server is already active for display".
+        display_num="${DISPLAY#:}"
+        display_num="${display_num%%.*}"
+        rm -f "/tmp/.X${display_num}-lock" "/tmp/.X11-unix/X${display_num}"
         echo "Starting Xvfb on $DISPLAY (1920x1080x24)"
         # No TCP and no abstract socket: only the root-only path socket below.
         Xvfb "$DISPLAY" -screen 0 1920x1080x24 -nolisten tcp -nolisten local &
