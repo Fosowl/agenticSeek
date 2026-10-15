@@ -887,3 +887,110 @@ body {
     height: 34px;
   }
 }
+
+.token-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.token-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 560px;
+  padding: 1.5rem;
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  font-size: 0.9rem;
+}
+
+.token-dialog h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.token-dialog p {
+  margin: 0;
+}
+
+.token-help {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.token-help code {
+  padding: 0.1rem 0.3rem;
+  background-color: var(--muted);
+  color: var(--foreground);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.token-error {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+  border-radius: var(--radius);
+}
+
+.token-dialog input {
+  padding: 0.6rem 0.75rem;
+  background-color: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.token-dialog input:focus {
+  border-color: var(--ring);
+}
+
+.token-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.token-actions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.token-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.token-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.token-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.token-secondary:hover {
+  background-color: var(--muted);
+}

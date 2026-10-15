@@ -5,6 +5,8 @@ import "./App.css";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ResizableLayout } from "./components/ResizableLayout";
 import { FileExplorer } from "./components/FileExplorer";
+import { TokenPrompt } from "./components/TokenPrompt";
+import { clearToken, getToken, onAuthRequired, saveToken } from "./apiAuth";
 import faviconPng from "./logo.png";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,6 +22,9 @@ function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
+  // null, or why the token prompt is open: "required", "rejected", "change".
+  const [tokenPrompt, setTokenPrompt] = useState(null);
+  const authRequired = tokenPrompt === "required" || tokenPrompt === "rejected";
   const messagesEndRef = useRef(null);
   // Normalized texts of agent answers already shown. A ref (not `messages`)
   // because polls overlap when the backend is slow: every in-flight response
@@ -58,14 +63,24 @@ function App() {
     }
   }, []);
 
+  useEffect(
+    () =>
+      onAuthRequired(({ tokenRejected }) =>
+        setTokenPrompt(tokenRejected ? "rejected" : "required")
+      ),
+    []
+  );
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       checkHealth();
+      // /health is public; the other calls would only 401 until a token is saved.
+      if (authRequired) return;
       fetchLatestAnswer();
       fetchScreenshot();
     }, 3000);
     return () => clearInterval(intervalId);
-  }, [fetchLatestAnswer]);
+  }, [fetchLatestAnswer, authRequired]);
 
   const checkHealth = async () => {
     try {
@@ -81,12 +96,10 @@ function App() {
   const fetchScreenshot = async () => {
     try {
       const timestamp = new Date().getTime();
-      const res = await axios.get(
-        `${BACKEND_URL}/screenshots/updated_screen.png?timestamp=${timestamp}`,
-        {
-          responseType: "blob",
-        }
-      );
+      const res = await axios.get(`${BACKEND_URL}/screenshot`, {
+        params: { timestamp },
+        responseType: "blob",
+      });
       console.log("Screenshot fetched successfully");
       const imageUrl = URL.createObjectURL(res.data);
       setResponseData((prev) => {
@@ -202,6 +215,18 @@ function App() {
     }
   };
 
+  const handleSaveToken = (token) => {
+    saveToken(token);
+    setTokenPrompt(null);
+    // Try the token right away: a 401 reopens the prompt as "rejected".
+    fetchLatestAnswer();
+  };
+
+  const handleClearToken = () => {
+    clearToken();
+    setTokenPrompt(null);
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -236,6 +261,24 @@ function App() {
             </svg>
             <span className="action-text">GitHub</span>
           </a>
+          <button
+            type="button"
+            className="action-button"
+            onClick={() => setTokenPrompt("change")}
+            aria-label="Change API token"
+            title="Change API token"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 7a4 4 0 1 1-3.87 5H9v2H7v2H4v-3l5.13-5.13A4 4 0 0 1 15 7z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="action-text">Token</span>
+          </button>
           <div>
             <ThemeToggle />
           </div>
@@ -419,13 +462,22 @@ function App() {
               <div hidden={currentView !== "files"} className="files-pane">
                 <FileExplorer
                   backendUrl={BACKEND_URL}
-                  active={currentView === "files"}
+                  active={currentView === "files" && !authRequired}
                 />
               </div>
             </div>
           </div>
         </ResizableLayout>
       </main>
+      {tokenPrompt && (
+        <TokenPrompt
+          reason={tokenPrompt}
+          hasToken={Boolean(getToken())}
+          onSave={handleSaveToken}
+          onClear={handleClearToken}
+          onCancel={() => setTokenPrompt(null)}
+        />
+      )}
     </div>
   );
 }

@@ -20,12 +20,13 @@ class FilesApiTestCase(unittest.TestCase):
         self._work_dir = os.path.join(self._root, "workspace")
         os.makedirs(os.path.join(self._work_dir, "src"))
         self._old_work_dir = os.environ.get("WORK_DIR")
-        self._old_token = os.environ.pop("AGENTICSEEK_API_TOKEN", None)
+        self._old_token = os.environ.get("AGENTICSEEK_API_TOKEN")
+        os.environ["AGENTICSEEK_API_TOKEN"] = "files-test-token"
         os.environ["WORK_DIR"] = self._work_dir
 
         app = FastAPI()
         app.include_router(files_api.router)
-        self.client = TestClient(app)
+        self.client = TestClient(app, headers={"Authorization": "Bearer files-test-token"})
 
     def tearDown(self):
         if self._old_work_dir is None:
