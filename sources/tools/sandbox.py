@@ -119,6 +119,21 @@ def hand_over_path(path: str) -> None:
         os.chown(path, *identity)
 
 
+def hand_over_fd(fd: int) -> None:
+    """Give an open file or directory that the backend created to the agent uid.
+
+    The upload API calls this for the files that the user sends and for the
+    upload directory. A descriptor stays on the same file, even when agent
+    code puts a symlink in its path. It does nothing when no drop applies.
+
+    Args:
+        fd (int): Open descriptor of a file or directory that the backend (root) just created.
+    """
+    identity = exec_identity()
+    if identity is not None:
+        os.fchown(fd, *identity)
+
+
 if __name__ == "__main__":
     import subprocess
 

@@ -114,6 +114,30 @@ class FileFinder(Tools):
                     file_path = os.path.join(root, f)
                     return file_path
         return None
+
+    def find_file(self, filename: str) -> str | None:
+        """Find a file that the model names in a file_finder block.
+
+        execute calls this for each block.
+        The name can be a workspace path, such as the .user_uploads/report.pdf
+        paths that the web interface adds to the user prompt, or a part of a
+        file name.
+        It returns the file at that exact path first, and else searches the
+        workspace by name.
+
+        Args:
+            filename (str): Value of the "name" parameter, from the model.
+
+        Returns:
+            str | None: Path of the file, or None when no file matches.
+        """
+        try:
+            exact_path = self.resolve_path(filename)
+        except (PermissionError, ValueError):
+            exact_path = None
+        if exact_path and os.path.isfile(exact_path):
+            return exact_path
+        return self.recursive_search(self.work_dir, filename)
         
 
     def execute(self, blocks: list, safety:bool = False) -> str:
@@ -136,8 +160,8 @@ class FileFinder(Tools):
                 return output
             if action is None:
                 action = "info"
-            print("File finder: recursive search started...")
-            file_path = self.recursive_search(self.work_dir, filename)
+            print("File finder: search started...")
+            file_path = self.find_file(filename)
             if file_path is None:
                 output = f"File: {filename} - not found\n"
                 continue

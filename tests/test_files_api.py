@@ -3,6 +3,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -138,6 +139,64 @@ class TestRawImage(FilesApiTestCase):
         self._write("page.html", b"<script>alert(1)</script>")
         response = self.client.get("/files/raw", params={"path": "page.html"})
         self.assertEqual(response.status_code, 415)
+
+
+class TestUpload(FilesApiTestCase):
+    def _upload(self, *files):
+        parts = [("files", (name, data, "application/octet-stream")) for name, data in files]
+        return self.client.post("/files/upload", files=parts)
+
+    def _read(self, relative):
+        with open(os.path.join(self._work_dir, relative), "rb") as handle:
+            return handle.read()
+
+    def test_files_are_saved_in_user_uploads(self):
+        response = self._upload(("finance.pdf", b"%PDF-1.4"), ("notes.txt", b"hi"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["paths"],
+            [".user_uploads/finance.pdf", ".user_uploads/notes.txt"],
+        )
+        self.assertEqual(self._read(".user_uploads/finance.pdf"), b"%PDF-1.4")
+
+    def test_existing_file_is_never_overwritten(self):
+        self._upload(("a.txt", b"first"))
+        paths = self._upload(("a.txt", b"second")).json()["paths"]
+        self.assertEqual(paths, [".user_uploads/a (1).txt"])
+        self.assertEqual(self._read(".user_uploads/a.txt"), b"first")
+        self.assertEqual(self._read(".user_uploads/a (1).txt"), b"second")
+
+    def test_directory_parts_in_name_are_dropped(self):
+        paths = self._upload(("../../escape.txt", b"x")).json()["paths"]
+        self.assertEqual(paths, [".user_uploads/escape.txt"])
+        self.assertFalse(os.path.exists(os.path.join(self._root, "escape.txt")))
+
+    def test_tag_and_list_characters_are_replaced_in_name(self):
+        paths = self._upload(("a<b>c,d.txt", b"x")).json()["paths"]
+        self.assertEqual(paths, [".user_uploads/a_b_c_d.txt"])
+
+    def test_name_without_file_part_is_rejected(self):
+        self.assertEqual(self._upload(("..", b"x")).status_code, 400)
+
+    def test_too_long_name_is_rejected_before_any_write(self):
+        response = self._upload(("ok.txt", b"x"), ("é" * 200 + ".pdf", b"x"))
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(os.path.exists(os.path.join(self._work_dir, ".user_uploads")))
+
+    def test_too_large_upload_writes_nothing(self):
+        with mock.patch.object(files_api, "MAX_UPLOAD_BYTES", 4):
+            response = self._upload(("ok.txt", b"1234"), ("big.txt", b"12345"))
+        self.assertEqual(response.status_code, 413)
+        self.assertFalse(os.path.exists(os.path.join(self._work_dir, ".user_uploads")))
+
+    def test_symlinked_upload_dir_is_refused(self):
+        outside = os.path.join(self._root, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, os.path.join(self._work_dir, ".user_uploads"))
+        response = self._upload(("a.txt", b"x"))
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(os.listdir(outside), [])
+
 
 
 if __name__ == "__main__":

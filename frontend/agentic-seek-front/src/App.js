@@ -24,6 +24,9 @@ function App() {
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
   // null, or why the token prompt is open: "required", "rejected", "change".
   const [tokenPrompt, setTokenPrompt] = useState(null);
+  // Files picked with the paperclip, uploaded when the query is sent.
+  const [attachments, setAttachments] = useState([]);
+  const fileInputRef = useRef(null);
   const authRequired = tokenPrompt === "required" || tokenPrompt === "rejected";
   const messagesEndRef = useRef(null);
   // Normalized texts of agent answers already shown. A ref (not `messages`)
@@ -171,6 +174,40 @@ function App() {
     }
   };
 
+  const handleAttach = (e) => {
+    const picked = Array.from(e.target.files || []);
+    setAttachments((prev) => [...prev, ...picked]);
+    // Reset so picking the same file again fires onChange.
+    e.target.value = "";
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Returns the workspace paths of the saved files, or null on failure.
+  const uploadAttachments = async (files) => {
+    if (files.length === 0) return [];
+    const form = new FormData();
+    files.forEach((file) => form.append("files", file));
+    try {
+      const res = await axios.post(`${BACKEND_URL}/files/upload`, form);
+      return res.data.paths;
+    } catch (err) {
+      console.error("Upload error:", err);
+      const detail = err.response?.data?.detail || "Unable to upload files.";
+      setMessages((prev) => [
+        ...prev,
+        { type: "error", content: `Upload failed: ${detail}` },
+      ]);
+      return null;
+    }
+  };
+
+  // The agent learns the saved paths from a <files> tag after the prompt.
+  const withFilesTag = (text, paths) =>
+    paths.length > 0 ? `${text} <files>${paths.join(", ")}</files>` : text;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     checkHealth();
@@ -178,15 +215,27 @@ function App() {
       console.log("Empty query");
       return;
     }
-    setMessages((prev) => [...prev, { type: "user", content: query }]);
     setIsLoading(true);
     setError(null);
+    // On upload failure keep the typed query and the attachments for a retry.
+    const paths = await uploadAttachments(attachments);
+    if (paths === null) {
+      setIsLoading(false);
+      return;
+    }
+    setMessages((prev) => [
+      ...prev,
+      { type: "user", content: query, files: attachments.map((file) => file.name) },
+    ]);
+    setAttachments([]);
 
+    const fullQuery = withFilesTag(query, paths);
+    let retryQuery = "";
     try {
-      console.log("Sending query:", query);
+      console.log("Sending query:", fullQuery);
       setQuery("waiting for response...");
       const res = await axios.post(`${BACKEND_URL}/query`, {
-        query,
+        query: fullQuery,
         tts_enabled: false,
       });
       setQuery("Enter your query...");
@@ -200,10 +249,12 @@ function App() {
         ...prev,
         { type: "error", content: "Error: Unable to get a response." },
       ]);
+      // Files are already saved; a retry resends their tag.
+      retryQuery = fullQuery;
     } finally {
       console.log("Query completed");
       setIsLoading(false);
-      setQuery("");
+      setQuery(retryQuery);
     }
   };
 
@@ -332,6 +383,13 @@ function App() {
                     </div>
                     <div className="message-content">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      {msg.files?.length > 0 && (
+                        <ul className="message-files">
+                          {msg.files.map((name, fileIndex) => (
+                            <li key={fileIndex}>📎 {name}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 ))
@@ -344,6 +402,25 @@ function App() {
                 System offline. Deploy backend first.
               </p>
             )}
+            {attachments.length > 0 && (
+              <ul className="attachment-list">
+                {attachments.map((file, index) => (
+                  <li key={`${file.name}-${index}`} className="attachment-chip">
+                    <span className="attachment-name" title={file.name}>
+                      {file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      disabled={isLoading}
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <form onSubmit={handleSubmit} className="input-form">
               <input
                 type="text"
@@ -353,6 +430,31 @@ function App() {
                 disabled={isLoading}
               />
               <div className="action-buttons">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={handleAttach}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="icon-button attach-button"
+                  aria-label="Attach files"
+                  title="Attach files"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
                 <button
                   type="submit"
                   disabled={isLoading}

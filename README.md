@@ -331,6 +331,8 @@ Use the CLI: `uv run cli.py`
 
 Make sure the services are up and running with `./start_services.sh full` and go to `localhost:3000` for web interface.
 
+To give the agent your own files in the web interface, click the paperclip next to the send button and pick one or more files. When you send the message, the files are saved in `WORK_DIR/.user_uploads/` (an existing file is never replaced: a second `report.pdf` becomes `report (1).pdf`; `<`, `>` and `,` in names become `_`), and their paths are added to your message, for example `review this document <files>.user_uploads/report.pdf</files>`. The limit is 50 MB per file.
+
 You can also use speech to text by setting `listen = True` in the config. Only for CLI mode.
 
 To exit, simply say/type `goodbye`.
