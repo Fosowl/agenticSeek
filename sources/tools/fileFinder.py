@@ -156,8 +156,8 @@ class FileFinder(Tools):
             filename = self.get_parameter_value(block, "name")
             action = self.get_parameter_value(block, "action")
             if filename is None:
-                output = "Error: No filename provided\n"
-                return output
+                return ("Error: No filename provided: the block needs a name= line. Use:\n"
+                        "```file_finder\naction=read\nname=<file name or workspace path>\n```")
             if action is None:
                 action = "info"
             print("File finder: search started...")

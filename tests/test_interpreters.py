@@ -78,6 +78,13 @@ class TestBashInterpreter(InterpreterTestCase):
         output = bash.execute(["exit 3"])
         self.assertIn("return code 3", output)
 
+    def test_skipped_language_command_is_reported_as_failure(self):
+        """Regression: python from bash was skipped silently and reported as success with no output."""
+        bash = BashInterpreter()
+        output = bash.execute(["python3 -c 'print(1)'"])
+        self.assertIn("not allowed", output)
+        self.assertTrue(bash.execution_failure_check(output))
+
 
 class TestPyInterpreter(InterpreterTestCase):
 

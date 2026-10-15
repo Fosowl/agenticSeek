@@ -22,7 +22,7 @@ for mod_name in [
 os.environ.setdefault('WORK_DIR', '/tmp')
 
 from sources.agents.agent import Agent
-from sources.agents.file_agent import FileAgent
+from sources.agents.file_agent import FileAgent, MAX_STEPS, STEP_LIMIT_MESSAGE
 from sources.agents.mcp_agent import McpAgent
 from sources.schemas import QueryRequest
 
@@ -43,14 +43,46 @@ def make_bare_agent(agent_class):
 
 class TestFileAgentLoop(unittest.TestCase):
 
-    def test_retry_loop_is_capped(self):
-        """Regression: persistent execution failures made process() loop forever."""
+    def _run_tool_calls(self, agent, answers_with_tools):
+        """Make execute_modules record one tool result for the given answers."""
+        def fake_execute(answer):
+            if answer in answers_with_tools:
+                agent.blocks_result.append(object())
+            return True, ""
+        agent.execute_modules = MagicMock(side_effect=fake_execute)
+
+    def test_tool_calls_continue_until_plain_answer(self):
+        """Regression: the agent stopped after the first tool call, or answered only 'done'."""
         agent = make_bare_agent(FileAgent)
-        agent.llm_request = AsyncMock(return_value=("answer", "reasoning"))
-        agent.execute_modules = MagicMock(return_value=(False, "failure"))
-        answer, reasoning = asyncio.run(agent.process("do something", None))
-        self.assertEqual(agent.llm_request.await_count, 5)
-        self.assertEqual(answer, "answer")
+        read_block = "```file_finder\naction=read\nname=a.pdf\n```"
+        agent.llm_request = AsyncMock(side_effect=[(read_block, "r1"), ("The paper shows X.", "r2")])
+        self._run_tool_calls(agent, {read_block})
+        answer, reasoning = asyncio.run(agent.process("summarize <files>a.pdf</files>", None))
+        self.assertEqual(agent.llm_request.await_count, 2)
+        self.assertEqual((answer, reasoning), ("The paper shows X.", "r2"))
+
+    def test_block_without_tool_is_not_the_final_answer(self):
+        """Regression: a ```python block (no such tool) ended the task with 'block:0' as answer."""
+        agent = make_bare_agent(FileAgent)
+        agent.tools = {"file_finder": None, "bash": None}
+        python_block = "Extracting.\n```python\nprint(1)\n```"
+        agent.llm_request = AsyncMock(side_effect=[(python_block, "r1"), ("Summary.", "r2")])
+        self._run_tool_calls(agent, set())
+        answer, _ = asyncio.run(agent.process("summarize", None))
+        self.assertEqual(answer, "Summary.")
+        feedback = agent.memory.push.call_args_list[-1].args
+        self.assertEqual(feedback[0], "user")
+        self.assertIn("file_finder, bash", feedback[1])
+
+    def test_step_loop_is_capped(self):
+        """Regression: a model that never stops calling tools made process() spin forever."""
+        agent = make_bare_agent(FileAgent)
+        bash_block = "```bash\nls\n```"
+        agent.llm_request = AsyncMock(return_value=(bash_block, "reasoning"))
+        self._run_tool_calls(agent, {bash_block})
+        answer, _ = asyncio.run(agent.process("do something", None))
+        self.assertEqual(agent.llm_request.await_count, MAX_STEPS)
+        self.assertTrue(answer.endswith(STEP_LIMIT_MESSAGE))
 
     def test_stop_before_first_attempt_returns_cleanly(self):
         """Regression: 'answer' was unbound when stop was requested early."""
