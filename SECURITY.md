@@ -1,5 +1,9 @@
 # Security Policy
 
+## Security model
+
+For what AgenticSeek does and does not protect against (API token, allowed hosts, agent code isolation in Docker, `safe_mode` limits), see the [Security model section of the README](README.md#security-model).
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in AgenticSeek, please report it responsibly.

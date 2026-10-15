@@ -88,6 +88,9 @@ Update the `.env` file with your own values as needed:
 - **OLLAMA_PORT**: Port number for the Ollama service.
 - **LM_STUDIO_PORT**: Port number for the LM Studio service.
 - **CUSTOM_ADDITIONAL_LLM_PORT**: Port for any additional custom LLM service.
+- **AGENTICSEEK_API_TOKEN** (optional): Token the web UI must send to the backend API. If unset, the backend generates one on first start and reuses it.
+- **AGENTICSEEK_ALLOWED_HOSTS** (optional): Comma-separated extra hostnames/IPs the backend answers to (default: `localhost`, `127.0.0.1` only). Needed only when you reach the backend via a LAN IP or hostname, together with `REACT_APP_BACKEND_URL` (e.g. `192.168.1.100`).
+- **AGENTICSEEK_EXEC_UID** (Docker): Agent commands run as this unprivileged uid. `start_services.sh` sets it to the owner of `WORK_DIR`. Linux users upgrading from an older version may need to run `sudo chown -R $(id -u) "$WORK_DIR"` once.
 
 **API Key are totally optional for user who choose to run LLM locally. Which is the primary purpose of this project. Leave empty if you have sufficient hardware**
 
@@ -285,6 +288,8 @@ start start_services.cmd full # Window
 **Warning:** This step will download and load all Docker images, which may take up to 30 minutes. After starting the services, please wait until the backend service is fully running (you should see **backend: "GET /health HTTP/1.1" 200 OK** in the log) before sending any messages. The backend services might take 5 minute to start on first run.
 
 Go to `http://localhost:3000/` and you should see the web interface.
+
+On first open, the web interface asks for an **API token**. Get it with `docker compose logs backend | grep "API token"` or `docker exec backend cat /opt/agent-runtime/api_token` (or set your own with `AGENTICSEEK_API_TOKEN` in `.env`). Paste it once; the browser remembers it.
 
 *Troubleshooting service start:* If these scripts fail, ensure Docker Engine is running and Docker Compose (V2, `docker compose`) is correctly installed. Check the output in the terminal for error messages. See [FAQ: Help! I get an error when running AgenticSeek or its scripts.](#faq-troubleshooting)
 
@@ -534,6 +539,15 @@ This section summarizes the supported LLM provider types. Configure them in `con
 | `togetherAI`                  | `False`    | Use TogetherAI's API for various open models.    | [Setup to run with an API](#setup-to-run-with-an-api) |
 
 ---
+## Security model
+
+- The backend API requires a token (`AGENTICSEEK_API_TOKEN`, auto-generated if unset). Only `/health` is public.
+- The backend only answers to `localhost`/`127.0.0.1` unless you add hosts in `AGENTICSEEK_ALLOWED_HOSTS`.
+- In Docker, code the agent runs executes as an unprivileged user, and API keys/tokens/secrets are removed from its environment. Generated scripts no longer see provider API keys via env; pass a key explicitly if a script needs one.
+- The backend container needs the `NET_ADMIN` capability (set in `docker-compose.yml`) to block agent code from loopback; without it the entrypoint prints a WARNING and agent code could reach chromedriver/Chrome DevTools.
+- That code can still read and write everything in `WORK_DIR` and use the network: only mount folders you are fine exposing.
+- `safe_mode` (on by default) is a best-effort command filter, not a sandbox.
+
 ## Troubleshooting
 
 If you encounter issues, this section provides guidance.

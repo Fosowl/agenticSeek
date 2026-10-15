@@ -88,6 +88,9 @@ ANTHROPIC_API_KEY='optional'
 - **OLLAMA_PORT**: Ollama servisi için port numarası.
 - **LM_STUDIO_PORT**: LM Studio servisi için port numarası.
 - **CUSTOM_ADDITIONAL_LLM_PORT**: Ek özel LLM servisi için port.
+- **AGENTICSEEK_API_TOKEN** (isteğe bağlı): Web arayüzünün backend API'sine göndermesi gereken token. Ayarlanmazsa backend ilk başlatmada bir tane üretir ve sonra yeniden kullanır.
+- **AGENTICSEEK_ALLOWED_HOSTS** (isteğe bağlı): Backend'in yanıt verdiği ek host adları/IP'ler, virgülle ayrılmış (varsayılan: yalnızca `localhost` ve `127.0.0.1`). Yalnızca backend'e bir LAN IP'si veya host adıyla erişiyorsanız, `REACT_APP_BACKEND_URL` ile birlikte gereklidir (örn. `192.168.1.100`).
+- **AGENTICSEEK_EXEC_UID** (Docker): Ajan komutları bu ayrıcalıksız uid ile çalışır. `start_services.sh` bunu `WORK_DIR` sahibine ayarlar. Eski bir sürümden yükseltme yapan Linux kullanıcılarının bir kez `sudo chown -R $(id -u) "$WORK_DIR"` çalıştırması gerekebilir.
 
 **API anahtarları, LLM'yi yerel olarak çalıştırmayı tercih eden kullanıcılar için tamamen isteğe bağlıdır. Bu projenin birincil amacı da budur. Yeterli donanımınız varsa boş bırakın.**
 
@@ -283,6 +286,8 @@ start start_services.cmd full # Windows
 **Uyarı:** Bu adım tüm Docker imajlarını indirip yükleyecektir, bu işlem 30 dakikaya kadar sürebilir. Servisleri başlattıktan sonra, herhangi bir mesaj göndermeden önce backend servisinin tamamen çalışır duruma gelmesini bekleyin (loglarda **backend: "GET /health HTTP/1.1" 200 OK** mesajını görmelisiniz). İlk çalıştırmada backend servisinin başlaması 5 dakika sürebilir.
 
 `http://localhost:3000/` adresine gidin ve web arayüzünü görmelisiniz.
+
+İlk açılışta web arayüzü bir **API token'ı** ister. Bunu `docker compose logs backend | grep "API token"` veya `docker exec backend cat /opt/agent-runtime/api_token` ile alın (ya da `.env` içinde `AGENTICSEEK_API_TOKEN` ile kendinizinkini belirleyin). Bir kez yapıştırın; tarayıcı hatırlar.
 
 *Servis başlatma sorun giderme:* Bu betikler başarısız olursa, Docker Engine'in çalıştığından ve Docker Compose'un (V2, `docker compose`) doğru şekilde yüklendiğinden emin olun. Hata mesajları için terminal çıktısını kontrol edin. Bkz. [SSS: AgenticSeek'i veya betiklerini çalıştırırken hata alıyorum.](#sss-sorun-giderme)
 
@@ -519,6 +524,15 @@ Bu bölüm desteklenen LLM sağlayıcı türlerini özetler. `config.ini` dosyas
 | `togetherAI`                  | `False`    | TogetherAI API'si üzerinden çeşitli açık modelleri kullanın.    | [API ile çalıştırma kurulumu](#api-ile-çalıştırma-kurulumu) |
 
 ---
+## Güvenlik modeli
+
+- Backend API'si bir token gerektirir (`AGENTICSEEK_API_TOKEN`, ayarlanmazsa otomatik üretilir). Yalnızca `/health` herkese açıktır.
+- `AGENTICSEEK_ALLOWED_HOSTS` içine host eklemediğiniz sürece backend yalnızca `localhost`/`127.0.0.1` adreslerine yanıt verir.
+- Docker'da ajanın çalıştırdığı kod ayrıcalıksız bir kullanıcı olarak çalışır ve API anahtarları/token'lar/sırlar ortamından kaldırılır. Üretilen betikler artık sağlayıcı API anahtarlarını ortam değişkenlerinden göremez; bir betiğin ihtiyacı varsa anahtarı açıkça verin.
+- Backend konteyneri, ajan kodunun loopback'e erişimini engellemek için `NET_ADMIN` yeteneğine ihtiyaç duyar (`docker-compose.yml` içinde ayarlı); bu olmadan entrypoint bir WARNING yazdırır ve ajan kodu chromedriver/Chrome DevTools'a erişebilir.
+- Bu kod yine de `WORK_DIR` içindeki her şeyi okuyup yazabilir ve ağı kullanabilir: yalnızca açığa çıkmasında sakınca olmayan klasörleri bağlayın.
+- `safe_mode` (varsayılan olarak açık) en iyi çabayla çalışan bir komut filtresidir, sandbox değildir.
+
 ## Sorun Giderme
 
 Sorunlarla karşılaşırsanız bu bölüm rehberlik sağlar.

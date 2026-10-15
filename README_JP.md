@@ -88,6 +88,9 @@ ANTHROPIC_API_KEY='optional'
 - **OLLAMA_PORT**: Ollamaサービスのポート番号。
 - **LM_STUDIO_PORT**: LM Studioサービスのポート番号。
 - **CUSTOM_ADDITIONAL_LLM_PORT**: 追加のカスタムLLMサービスのポート。
+- **AGENTICSEEK_API_TOKEN**（任意）：WebインターフェースがバックエンドAPIに送信するトークン。未設定の場合、バックエンドが初回起動時に生成し、以降も再利用します。
+- **AGENTICSEEK_ALLOWED_HOSTS**（任意）：バックエンドが応答する追加のホスト名/IP（カンマ区切り。デフォルトは `localhost` と `127.0.0.1` のみ）。LANのIPやホスト名でバックエンドにアクセスする場合のみ、`REACT_APP_BACKEND_URL` と合わせて設定します（例：`192.168.1.100`）。
+- **AGENTICSEEK_EXEC_UID**（Docker）：エージェントのコマンドはこの非特権uidで実行されます。`start_services.sh` が `WORK_DIR` の所有者に設定します。旧バージョンからアップグレードするLinuxユーザーは、一度 `sudo chown -R $(id -u) "$WORK_DIR"` の実行が必要な場合があります。
 
 **APIキーは、ローカルでLLMを実行することを選択するユーザーには完全にオプションであり、これがこのプロジェクトの主な目的です。ハードウェアが十分にある場合は空のままにしてください。**
 
@@ -275,6 +278,8 @@ start start_services.cmd full # Windows
 **警告:** このステップではすべてのDockerイメージがダウンロードされロードされます。最大30分かかる場合があります。サービスを起動した後、メッセージを送信する前にバックエンドサービスが完全に実行されていることを確認してください（ログに**backend: "GET /health HTTP/1.1" 200 OK**が表示されるはずです）。初回実行時、バックエンドサービスは起動に5分かかる場合があります。
 
 `http://localhost:3000/`にアクセスすると、Webインターフェースが表示されます。
+
+初回アクセス時、Webインターフェースは **APIトークン** を要求します。`docker compose logs backend | grep "API token"` または `docker exec backend cat /opt/agent-runtime/api_token` で取得してください（`.env` の `AGENTICSEEK_API_TOKEN` で独自のトークンを設定することもできます）。一度貼り付ければブラウザが記憶します。
 
 *サービス起動のトラブルシューティング:* これらのスクリプトが失敗する場合は、Docker Engineが実行中でDocker Compose（V2、`docker compose`）が正しくインストールされていることを確認してください。ターミナル出力のエラーメッセージを確認してください。[FAQ: ヘルプ！AgenticSeekまたはそのスクリプトを実行するとエラーが発生します](#faq-トラブルシューティング)を参照してください。
 
@@ -511,6 +516,15 @@ stealth_mode = False
 | `togetherAI`                  | `False`    | TogetherAIのAPIを通じて様々なオープンモデルを使用。    | [APIを使用した実行設定](#apiを使用した実行設定) |
 
 ---
+## セキュリティモデル
+
+- バックエンドAPIにはトークンが必要です（`AGENTICSEEK_API_TOKEN`、未設定なら自動生成）。公開されているのは `/health` のみです。
+- `AGENTICSEEK_ALLOWED_HOSTS` にホストを追加しない限り、バックエンドは `localhost`/`127.0.0.1` にのみ応答します。
+- Docker では、エージェントが実行するコードは非特権ユーザーとして動作し、APIキー/トークン/シークレットは環境変数から削除されます。生成されたスクリプトは環境変数経由でプロバイダーのAPIキーを参照できなくなりました。必要な場合は明示的に渡してください。
+- バックエンドコンテナには、エージェントのコードからループバックへのアクセスを遮断するために `NET_ADMIN` ケーパビリティが必要です（`docker-compose.yml` で設定済み）。ない場合、エントリポイントは WARNING を表示し、エージェントのコードが chromedriver/Chrome DevTools に到達できる可能性があります。
+- それでもこのコードは `WORK_DIR` 内のすべてを読み書きでき、ネットワークも使用できます。公開してもよいフォルダのみをマウントしてください。
+- `safe_mode`（デフォルトで有効）はベストエフォートのコマンドフィルターであり、サンドボックスではありません。
+
 ## トラブルシューティング
 
 問題が発生した場合、このセクションはガイダンスを提供します。

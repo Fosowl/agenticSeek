@@ -88,6 +88,9 @@ ANTHROPIC_API_KEY='optional'
 - **OLLAMA_PORT**: Ollama 服務端口號。
 - **LM_STUDIO_PORT**: LM Studio 服務端口號。
 - **CUSTOM_ADDITIONAL_LLM_PORT**: 任何額外自定義 LLM 服務的端口。
+- **AGENTICSEEK_API_TOKEN**（可選）：Web 界面存取後端 API 時必須攜帶的令牌。未設置時，後端會在首次啟動時自動生成並在之後重複使用。
+- **AGENTICSEEK_ALLOWED_HOSTS**（可選）：後端額外接受的主機名/IP，逗號分隔（預設僅 `localhost`、`127.0.0.1`）。僅當您透過區域網路 IP 或主機名存取後端時需要，並配合 `REACT_APP_BACKEND_URL` 使用（例如 `192.168.1.100`）。
+- **AGENTICSEEK_EXEC_UID**（Docker）：智能體命令以該非特權 uid 運行。`start_services.sh` 會將其設為 `WORK_DIR` 的擁有者。從舊版本升級的 Linux 用戶可能需要執行一次 `sudo chown -R $(id -u) "$WORK_DIR"`。
 
 **API 密鑰對於選擇本地運行 LLM 的用戶完全可選，這也是本項目的主要目的。如果硬件足夠，請留空。**
 
@@ -275,6 +278,8 @@ start start_services.cmd full # Windows
 **警告：** 此步驟將下載並加載所有 Docker 鏡像，可能需要長達 30 分鐘。啟動服務後，請等待後端服務完全運行（您應該在日誌中看到 **backend: "GET /health HTTP/1.1" 200 OK**）後再發送任何消息。首次運行時，後端服務可能需要 5 分鐘才能啟動。
 
 轉到 `http://localhost:3000/`，您應該會看到 Web 界面。
+
+首次打開時，Web 界面會要求輸入 **API 令牌**。可透過 `docker compose logs backend | grep "API token"` 或 `docker exec backend cat /opt/agent-runtime/api_token` 取得（也可在 `.env` 中用 `AGENTICSEEK_API_TOKEN` 設置自己的令牌）。只需貼上一次，瀏覽器會記住它。
 
 *服務啟動故障排除：* 如果這些腳本失敗，請確保 Docker Engine 正在運行並且 Docker Compose（V2，`docker compose`）已正確安裝。檢查終端輸出中的錯誤消息。請參閱 [FAQ：幫助！運行 AgenticSeek 或其腳本時出現錯誤。](#faq-故障排除)
 
@@ -511,6 +516,15 @@ stealth_mode = False
 | `togetherAI`                  | `False`    | 使用 TogetherAI 的 API 獲取各種開放模型。    | [使用 API 運行設置](#使用-api-運行設置) |
 
 ---
+## 安全模型
+
+- 後端 API 需要令牌（`AGENTICSEEK_API_TOKEN`，未設置時自動生成）。只有 `/health` 是公開的。
+- 除非在 `AGENTICSEEK_ALLOWED_HOSTS` 中添加主機，後端只回應 `localhost`/`127.0.0.1`。
+- 在 Docker 中，智能體運行的程式碼以非特權用戶執行，且 API 金鑰/令牌/機密會從其環境變數中移除。生成的腳本不再能透過環境變數看到提供商 API 金鑰；如腳本需要，請明確傳入。
+- 後端容器需要 `NET_ADMIN` 權限（已在 `docker-compose.yml` 中設定）以阻止智能體程式碼存取回環位址；缺少時入口腳本會印出 WARNING，智能體程式碼可能存取 chromedriver/Chrome DevTools。
+- 這些程式碼仍可讀寫 `WORK_DIR` 中的所有內容並存取網路：只掛載您願意暴露的資料夾。
+- `safe_mode`（預設開啟）只是盡力而為的命令過濾，不是沙箱。
+
 ## 故障排除
 
 如果遇到問題，本節提供指導。
