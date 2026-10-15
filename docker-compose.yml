@@ -75,16 +75,20 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      # Publish on the host loopback only. The backend is unauthenticated and the
-      # agent runs shell commands on the host, so it must not be reachable from the
-      # network by default. To expose it intentionally, change this to
-      # "0.0.0.0:${BACKEND_PORT}:${BACKEND_PORT}" and put it behind auth/a firewall.
+      # Publish on the host loopback only. The agent runs shell commands, so even
+      # with the API token required, keep it off the network by default. To expose
+      # it intentionally, change this to "0.0.0.0:${BACKEND_PORT}:${BACKEND_PORT}",
+      # add the host to AGENTICSEEK_ALLOWED_HOSTS and put it behind TLS.
       - 127.0.0.1:${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
     volumes:
-      # Agent workspace: the only directory agents may read/write/execute in.
+      # Agent workspace: agent-run code (unprivileged uid) may write only here and /tmp.
       - ${WORK_DIR}:/opt/workspace
-      # Runtime data (logs, screenshots, sessions) — kept separate from app source.
+      # Runtime data (logs, screenshots, sessions, API token) — root-only (0700).
       - agent-runtime:/opt/agent-runtime
+    # NET_ADMIN lets the entrypoint block loopback for agent-run code, which
+    # would otherwise reach root-owned chromedriver/Chrome DevTools ports.
+    cap_add:
+      - NET_ADMIN
     command: python3 api.py
     environment:
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
@@ -98,6 +102,12 @@ services:
       - BACKEND_HOST=0.0.0.0
       - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost:3000}
       - DOCKER_INTERNAL_URL=http://host.docker.internal
+      # API token; auto-generated into /opt/agent-runtime/api_token when empty.
+      - AGENTICSEEK_API_TOKEN=${AGENTICSEEK_API_TOKEN:-}
+      - AGENTICSEEK_ALLOWED_HOSTS=${AGENTICSEEK_ALLOWED_HOSTS:-}
+      # Agent-run code runs as this uid; match the owner of WORK_DIR on Linux.
+      - AGENTICSEEK_EXEC_UID=${AGENTICSEEK_EXEC_UID:-1000}
+      - AGENTICSEEK_EXEC_GID=${AGENTICSEEK_EXEC_GID:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}

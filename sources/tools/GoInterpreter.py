@@ -7,6 +7,7 @@ if __name__ == "__main__": # if running as a script for individual testing
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sources.tools.tools import Tools
+from sources.tools.sandbox import hand_over_path, subprocess_isolation
 
 class GoInterpreter(Tools):
     """
@@ -29,21 +30,22 @@ class GoInterpreter(Tools):
             return "Code rejected by user."
 
         with tempfile.TemporaryDirectory() as tmpdirname:
+            hand_over_path(tmpdirname)
             source_file = os.path.join(tmpdirname, "temp.go")
             exec_file = os.path.join(tmpdirname, "temp")
             with open(source_file, 'w') as f:
                 f.write(code)
 
             try:
-                env = os.environ.copy()
-                env["GO111MODULE"] = "off"
+                isolation = subprocess_isolation(self.work_dir)
+                isolation["env"]["GO111MODULE"] = "off"
                 compile_command = ["go", "build", "-o", exec_file, source_file]
                 compile_result = subprocess.run(
                     compile_command,
                     capture_output=True,
                     text=True,
                     timeout=10,
-                    env=env
+                    **isolation
                 )
 
                 if compile_result.returncode != 0:
@@ -54,7 +56,8 @@ class GoInterpreter(Tools):
                     run_command,
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
+                    **isolation
                 )
 
                 if run_result.returncode != 0:

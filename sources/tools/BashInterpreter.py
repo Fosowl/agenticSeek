@@ -9,6 +9,7 @@ if __name__ == "__main__": # if running as a script for individual testing
 
 from sources.tools.tools import Tools
 from sources.tools.safety import is_unsafe
+from sources.tools.sandbox import subprocess_isolation
 
 class BashInterpreter(Tools):
     """
@@ -60,7 +61,8 @@ class BashInterpreter(Tools):
                     cwd=self.work_dir,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    universal_newlines=True
+                    universal_newlines=True,
+                    **subprocess_isolation(self.work_dir)
                 )
                 try:
                     command_output, _ = process.communicate(timeout=timeout)

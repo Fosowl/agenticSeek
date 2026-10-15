@@ -27,6 +27,7 @@ if __name__ == "__main__": # if running as a script for individual testing
 
 from sources.logger import Logger
 from sources.workspace import ensure_work_dir, get_work_dir, resolve_workspace_path
+from sources.tools.sandbox import hand_over_path
 
 class Tools():
     """
@@ -117,12 +118,32 @@ class Tools():
         else:
             directory = self.work_dir
         file_path = self.resolve_path(os.path.join(directory, save_path_file))
-        if not os.path.exists(directory):
-            self.logger.info(f"Creating directory {directory}")
-            os.makedirs(directory)
+        self._make_agent_dirs(directory)
         for block in blocks:
             with open(file_path, 'w') as f:
                 f.write(block)
+        hand_over_path(file_path)
+
+    def _make_agent_dirs(self, directory: str) -> None:
+        """Create a workspace directory that agent code can write to.
+
+        save_block calls this before it writes a code block into the workspace.
+        It creates missing directories and gives only the new ones to the
+        unprivileged agent uid (no-op without a privilege drop).
+
+        Args:
+            directory (str): Resolved absolute directory inside the workspace.
+        """
+        missing = []
+        path = directory
+        while not os.path.exists(path):
+            missing.append(path)
+            path = os.path.dirname(path)
+        if missing:
+            self.logger.info(f"Creating directory {directory}")
+            os.makedirs(directory)
+        for created in missing:
+            hand_over_path(created)
     
     def get_parameter_value(self, block: str, parameter_name: str) -> str:
         """
