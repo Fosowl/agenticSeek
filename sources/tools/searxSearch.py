@@ -104,8 +104,7 @@ class searxSearch(Tools):
                 f"{self.base_url}/search",
                 params={'q': query, 'format': 'json', 'categories': 'general', 'language': 'auto', 'safesearch': '0'},
                 headers={'User-Agent': self.user_agent, 'Accept': 'application/json'},
-                timeout=self.request_timeout,
-                verify=False
+                timeout=self.request_timeout
             )
             response.raise_for_status()
             payload = response.json()
@@ -159,7 +158,7 @@ class searxSearch(Tools):
         for attempt in range(1, self.max_attempts + 1):
             retry_after = None
             try:
-                response = requests.post(search_url, headers=headers, data=data, verify=False, timeout=self.request_timeout)
+                response = requests.post(search_url, headers=headers, data=data, timeout=self.request_timeout)
             except requests.exceptions.RequestException as e:
                 if self._never_connected(e):  # nothing listens: retrying will not help
                     raise self._unreachable_error(e) from e
