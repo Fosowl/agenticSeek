@@ -10,13 +10,13 @@ pydantic_core>=2.27.2
 setuptools>=75.6.0
 sacremoses>=0.0.53
 requests>=2.31.0
-numpy>=1.24.4
+numpy>=1.24.4,<2
 colorama>=0.4.6
 python-dotenv>=1.0.0
 playsound3>=1.0.0
 soundfile>=0.13.1
 transformers>=4.46.3
-torch>=2.4.1
+torch>=2.2.0,<2.3
 ollama>=0.4.7
 scipy>=1.9.3
 soundfile>=0.13.1
@@ -46,3 +46,5 @@ openai
 sniffio
 ordered_set
 pypinyin
+numba==0.60.0
+llvmlite==0.43.0

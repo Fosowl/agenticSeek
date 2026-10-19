@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   redis:
@@ -58,7 +57,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.frontend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./frontend/agentic-seek-front/src:/app/src:rw,z
       - ./screenshots:/app/screenshots
