@@ -1,0 +1,26 @@
+{
+  "name": "gmail-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gmail assistant: commands by email, document processing, Google Drive",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "auth": "node src/index.js --auth",
+    "start": "node src/index.js",
+    "once": "node src/index.js --once",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@google-cloud/local-auth": "^3.0.1",
+    "dotenv": "^18.0.8",
+    "exceljs": "^4.4.0",
+    "googleapis": "^186.0.0",
+    "mammoth": "^1.13.0",
+    "pdf-parse": "^2.4.5"
+  }
+}
