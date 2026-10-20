@@ -244,7 +244,7 @@ provider_server_address = # 当 is_local = False 时，对于大多数 API 通�
 | Hugging Face | `huggingface`   | 否     | 使用 Hugging Face Inference API 中的模型。       | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | TogetherAI   | `togetherAI`    | 否     | 通过 TogetherAI API 使用各种开源模型。| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
 | OpenRouter   | `openrouter`    | No     | 通过 OpenRouter 使用各种开源模型| [https://openrouter.ai/](https://openrouter.ai/) |
-| MiniMax      | `minimax`       | 否     | 使用 MiniMax 模型（如 MiniMax-M3、MiniMax-M2.7）。 | [platform.minimax.io](https://platform.minimax.io/user-center/basic-information) |
+| MiniMax      | `minimax`       | No     | Use MiniMax-M3.1-Flash (default when `provider_model` is empty) or MiniMax-M3. | [platform.minimax.io](https://platform.minimax.io/user-center/basic-information) |
 
 *注意：*
 *   我们不建议将 `gpt-4o` 或其他 OpenAI 模型用于复杂的网页浏览和任务规划，因为当前的提示优化针对 Deepseek 等模型。
