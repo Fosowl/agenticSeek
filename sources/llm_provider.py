@@ -21,7 +21,7 @@ class Provider:
         # Normalize provider name aliases (e.g. README documents 'togetherAI' but canonical key is 'together')
         _aliases = {"togetherai": "together"}
         self.provider_name = _aliases.get(self.provider_name, self.provider_name)
-        self.model = model
+        self.model = "MiniMax-M3.1-Flash" if self.provider_name == "minimax" and not model else model
         self.is_local = is_local
         self.server_ip = server_address
         self.server_address = server_address
@@ -368,10 +368,11 @@ class Provider:
         """
         Use MiniMax API through its OpenAI- or Anthropic-compatible interface.
 
-        Supported models:
-        - MiniMax-M3: Latest flagship model with enhanced reasoning and coding (default)
-        - MiniMax-M2.7: Previous flagship, kept for compatibility
-        - MiniMax-M2.7-highspeed: High-speed version of M2.7 for low-latency scenarios
+        Recommended models:
+        - MiniMax-M3.1-Flash: Default when no model is configured
+        - MiniMax-M3
+
+        Explicit saved, custom, and legacy model IDs are passed through unchanged.
 
         Note: temperature must be in range (0.0, 1.0], default is 1.0
         """
