@@ -271,7 +271,8 @@ class PlannerAgent(Agent):
         agents_tasks = []
         required_infos = None
         agents_work_result = dict()
-
+        # If a stop has already been requested, the return answer statement in this method will raise an UnboundLocalError
+        answer = ""
         self.status_message = "Making a plan..."
         agents_tasks = await self.make_plan(goal)
 
