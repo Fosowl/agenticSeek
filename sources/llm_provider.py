@@ -36,6 +36,7 @@ class Provider:
             "together": self.together_fn,
             "dsk_deepseek": self.dsk_deepseek,
             "openrouter": self.openrouter_fn,
+            "trustedrouter": self.trustedrouter_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
             "litellm": self.litellm_fn,
@@ -44,7 +45,7 @@ class Provider:
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "anthropic", "minimax"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "trustedrouter", "anthropic", "minimax"]
         if self.provider_name not in self.available_providers:
             raise AgenticSeekError(
                 "Unknown provider",
@@ -353,6 +354,30 @@ class Provider:
         if self.is_local:
             raise provider_error("local_unsupported", self.error_context())
         client = OpenAI(api_key=self.api_key, base_url="https://openrouter.ai/api/v1")
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
+
+    def trustedrouter_fn(self, history, verbose=False):
+        """
+        Use TrustedRouter API to generate text.
+
+        Model ids are namespaced (e.g. anthropic/claude-opus-4-7); a bare id is
+        rejected. Ids under trustedrouter/ are routing policies rather than single
+        models - each picks an upstream per request and fails over. trustedrouter/zdr
+        and trustedrouter/e2e restrict routing to providers that retain no data or
+        run confidential compute.
+        """
+        if self.is_local:
+            raise provider_error("local_unsupported", self.error_context())
+        client = OpenAI(api_key=self.api_key, base_url="https://api.trustedrouter.com/v1")
         response = client.chat.completions.create(
             model=self.model,
             messages=history,

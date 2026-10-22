@@ -75,6 +75,7 @@ PROVIDER_LABELS = {
     "together": "Together AI",
     "dsk_deepseek": "DeepSeek (dsk)",
     "openrouter": "OpenRouter",
+    "trustedrouter": "TrustedRouter",
     "anthropic": "Anthropic",
     "minimax": "MiniMax",
     "litellm": "LiteLLM",
