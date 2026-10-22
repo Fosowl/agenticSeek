@@ -788,7 +788,6 @@ We’re looking for developers to improve AgenticSeek! Check out open issues or 
 
 [Contribution guide](./docs/CONTRIBUTING.md)
 
-
 ## Sponsors:
 
 ### SwiftProxy
@@ -813,10 +812,16 @@ See [Contributing.md](./docs/CONTRIBUTING.md) to learn how to integrate custom t
 
 ## Maintainers:
 
+ **Core (Agents, Tools, Systems, Searxng, Backend)**
  > [Fosowl](https://github.com/Fosowl) | Paris Time
+
+ **Frontend**
+ > [Tanvir Ahamed](https://github.com/nettanvirdev) For frontend design. 
 
 ## Special Thanks:
 
  > [tcsenpai](https://github.com/tcsenpai) and [plitc](https://github.com/plitc) For helping with backend dockerization
+
+ > [Tanvir Ahamed](https://github.com/nettanvirdev) For frontend design. 
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Fosowl/agenticSeek&type=Date)](https://www.star-history.com/#Fosowl/agenticSeek&Date)
