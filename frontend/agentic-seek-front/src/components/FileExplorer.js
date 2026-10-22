@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+import { ICONS, Icon } from "./Agent";
 import "./FileExplorer.css";
 
 const ROOT = "";
 const MARKDOWN_FILE = /\.(md|markdown)$/i;
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i;
 
 const formatBytes = (bytes) => {
   if (bytes == null) return "";
@@ -153,8 +155,10 @@ export const FileExplorer = ({ backendUrl, active }) => {
               onClick={() => toggleDirectory(entry.path)}
               title={entry.path}
             >
-              <span className="file-tree-caret">{isOpen ? "▾" : "▸"}</span>
-              <span className="file-tree-icon">{isOpen ? "📂" : "📁"}</span>
+              <span className={`file-tree-caret ${isOpen ? "open" : ""}`}>›</span>
+              <span className="file-tree-icon folder">
+                <Icon d={ICONS.folder} size={14} />
+              </span>
               <span className="file-tree-name">{entry.name}</span>
             </button>
             {isOpen && renderDirectory(entry.path, depth + 1)}
@@ -171,7 +175,9 @@ export const FileExplorer = ({ backendUrl, active }) => {
           title={entry.path}
         >
           <span className="file-tree-caret" />
-          <span className="file-tree-icon">📄</span>
+          <span className="file-tree-icon">
+            <Icon d={IMAGE_FILE.test(entry.name) ? ICONS.image : ICONS.file} size={14} />
+          </span>
           <span className="file-tree-name">{entry.name}</span>
           <span className="file-tree-size">{formatBytes(entry.size)}</span>
         </button>
@@ -215,7 +221,12 @@ export const FileExplorer = ({ backendUrl, active }) => {
       <>
         <div className="file-viewer-header">
           <span className="file-viewer-path" title={meta.path}>
-            {meta.path}
+            {meta.path.split("/").map((part, i, parts) => (
+              <React.Fragment key={`${part}-${i}`}>
+                {i > 0 && <span className="crumb-sep">›</span>}
+                <span className={i === parts.length - 1 ? "crumb-current" : ""}>{part}</span>
+              </React.Fragment>
+            ))}
           </span>
           <span className="file-viewer-size">{formatBytes(meta.size)}</span>
           {meta.kind === "text" && MARKDOWN_FILE.test(meta.name) && (
@@ -243,14 +254,15 @@ export const FileExplorer = ({ backendUrl, active }) => {
     <div className="file-explorer">
       <div className="file-tree">
         <div className="file-tree-toolbar">
-          <span>Workspace</span>
+          <span className="eyebrow">Workspace</span>
           <button
             type="button"
-            className="file-explorer-button"
+            className="icon-button ghost file-refresh"
             onClick={refresh}
+            aria-label="Refresh files"
             title="Reload the file tree and the open file"
           >
-            ⟳ Refresh
+            <Icon d={ICONS.refresh} size={15} />
           </button>
         </div>
         <div className="file-tree-entries">{renderDirectory(ROOT, 0)}</div>

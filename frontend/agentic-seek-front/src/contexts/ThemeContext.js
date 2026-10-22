@@ -1,25 +1,38 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { DEFAULTS, applySettings, loadSettings, saveSettings } from "../settings";
 
 const ThemeContext = createContext();
+const DARK_QUERY = "(prefers-color-scheme: dark)";
+
+const systemIsDark = () => window.matchMedia?.(DARK_QUERY).matches ?? false;
 
 export const ThemeProvider = ({ children }) => {
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    return saved ? saved === "dark" : true; // Default to dark
-  });
+  const [settings, setSettings] = useState(loadSettings);
+  const [systemDark, setSystemDark] = useState(systemIsDark);
+  const isDark = settings.theme === "system" ? systemDark : settings.theme === "dark";
+
+  // Follow the OS while the theme is "system".
+  useEffect(() => {
+    const media = window.matchMedia?.(DARK_QUERY);
+    if (!media) return undefined;
+    const onChange = (e) => setSystemDark(e.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-    document.documentElement.setAttribute(
-      "data-theme",
-      isDark ? "dark" : "light"
-    );
-  }, [isDark]);
+    saveSettings(settings);
+    applySettings(settings, isDark);
+  }, [settings, isDark]);
 
-  const toggleTheme = () => setIsDark(!isDark);
+  const updateSettings = (patch) => setSettings((prev) => ({ ...prev, ...patch }));
+  const resetSettings = () => setSettings({ ...DEFAULTS });
+  const toggleTheme = () => updateSettings({ theme: isDark ? "light" : "dark" });
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{ settings, updateSettings, resetSettings, isDark, toggleTheme }}
+    >
       {children}
     </ThemeContext.Provider>
   );
