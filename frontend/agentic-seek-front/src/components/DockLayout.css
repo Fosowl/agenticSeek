@@ -1,0 +1,95 @@
+.dock-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dock-main {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.dock {
+  position: relative;
+  flex-shrink: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--panel);
+  transition: width 0.22s ease;
+}
+
+.dock-open .dock {
+  width: var(--dock-width);
+}
+
+/* Closed on desktop: hidden from Tab and screen readers once it has slid shut. */
+@media (min-width: 769px) {
+  .dock-layout:not(.dock-open) .dock {
+    visibility: hidden;
+    transition: width 0.22s ease, visibility 0s 0.22s;
+  }
+}
+
+/* An eased width would chase the pointer a frame behind. */
+.dragging .dock {
+  transition: none;
+}
+
+.dragging {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Fixed inner width, so content does not reflow while the dock opens. */
+.dock-inner {
+  width: var(--dock-width);
+  height: 100%;
+}
+
+.dock-open .dock-inner {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Wider to hit than it is to see: a hairline that lights up on hover. */
+.dock-handle {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 5;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.dock-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.1s ease;
+}
+
+.dock-handle:hover::after,
+.dock-handle:focus-visible::after,
+.dragging .dock-handle::after {
+  background: var(--accent);
+}
+
+/* Phones show one pane at a time (App.css picks which); the dock fills the screen. */
+@media (max-width: 768px) {
+  .dock,
+  .dock-open .dock,
+  .dock-inner {
+    width: 100%;
+    border-left: none;
+    transition: none;
+  }
+
+  .dock-handle {
+    display: none;
+  }
+}
