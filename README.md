@@ -254,6 +254,7 @@ provider_server_address = # Typically ignored or can be left blank when is_local
 | TogetherAI   | `togetherAI`    | No     | Use various open-source models via TogetherAI API.| [api.together.ai/settings/api-keys](https://api.together.ai/settings/api-keys) |
 | OpenRouter   | `openrouter`    | No     | Use OpenRouter Models| [https://openrouter.ai/](https://openrouter.ai/) |
 | TrustedRouter| `trustedrouter` | No     | Use TrustedRouter Models| [https://trustedrouter.com/](https://trustedrouter.com/) |
+| Opper        | `opper`         | No     | Use Opper Models (EU-hosted gateway)| [https://opper.ai/](https://opper.ai/) |
 | MiniMax      | `minimax`       | No     | Use MiniMax models (e.g., MiniMax-M3, MiniMax-M2.7).| [platform.minimax.io](https://platform.minimax.io/user-center/basic-information) |
 
 *Note:*

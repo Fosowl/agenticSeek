@@ -37,6 +37,7 @@ class Provider:
             "dsk_deepseek": self.dsk_deepseek,
             "openrouter": self.openrouter_fn,
             "trustedrouter": self.trustedrouter_fn,
+            "opper": self.opper_fn,
             "anthropic": self.anthropic_fn,
             "minimax": self.minimax_fn,
             "litellm": self.litellm_fn,
@@ -45,7 +46,7 @@ class Provider:
         self.logger = Logger("provider.log")
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
-        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "trustedrouter", "anthropic", "minimax"]
+        self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter", "trustedrouter", "opper", "anthropic", "minimax"]
         if self.provider_name not in self.available_providers:
             raise AgenticSeekError(
                 "Unknown provider",
@@ -378,6 +379,29 @@ class Provider:
         if self.is_local:
             raise provider_error("local_unsupported", self.error_context())
         client = OpenAI(api_key=self.api_key, base_url="https://api.trustedrouter.com/v1")
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=history,
+        )
+        if response is None:
+            raise provider_error("empty_response", self.error_context())
+        thought = response.choices[0].message.content
+        if verbose:
+            print(thought)
+        return thought
+
+    def opper_fn(self, history, verbose=False):
+        """
+        Use Opper API to generate text.
+
+        Opper is an EU-hosted gateway with an OpenAI-compatible endpoint.
+        Model ids are pool names (e.g. deepseek-v4-pro, claude-sonnet-4-6) and
+        Opper picks the provider per request. A provider/model id (e.g.
+        aws/claude-sonnet-4-6-eu) pins one provider and region.
+        """
+        if self.is_local:
+            raise provider_error("local_unsupported", self.error_context())
+        client = OpenAI(api_key=self.api_key, base_url="https://api.opper.ai/v3/compat")
         response = client.chat.completions.create(
             model=self.model,
             messages=history,
