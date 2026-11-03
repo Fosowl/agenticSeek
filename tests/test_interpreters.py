@@ -72,6 +72,8 @@ class TestBashInterpreter(InterpreterTestCase):
         bash = BashInterpreter()
         output = bash.execute(["sleep 5"], timeout=1)
         self.assertIn("timed out", output)
+        self.assertTrue(bash.execution_failure_check(output))
+        self.assertTrue(bash.interpreter_feedback(output).startswith("[failure]"))
 
     def test_failing_command_reports_return_code(self):
         bash = BashInterpreter()

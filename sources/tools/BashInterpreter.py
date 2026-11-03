@@ -98,6 +98,7 @@ class BashInterpreter(Tools):
             r"expected",
             r"errno",
             r"failed",
+            r"timed out",
             r"invalid",
             r"unrecognized",
             r"exception",
