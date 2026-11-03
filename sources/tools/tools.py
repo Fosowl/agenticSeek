@@ -119,9 +119,8 @@ class Tools():
             directory = self.work_dir
         file_path = self.resolve_path(os.path.join(directory, save_path_file))
         self._make_agent_dirs(directory)
-        for block in blocks:
-            with open(file_path, 'w') as f:
-                f.write(block)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(blocks))
         hand_over_path(file_path)
 
     def _make_agent_dirs(self, directory: str) -> None:
