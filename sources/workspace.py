@@ -18,7 +18,10 @@ def _read_config_work_dir() -> str | None:
     if not os.path.exists("config.ini"):
         return None
     config = configparser.ConfigParser()
-    config.read("config.ini")
+    # config.ini is written as UTF-8 (the shipped default and the docs); reading
+    # it with the platform default encoding crashes (UnicodeDecodeError) or
+    # mangles non-ASCII work_dir values on legacy ANSI code pages (cp936/cp1252).
+    config.read("config.ini", encoding="utf-8")
     if "MAIN" not in config:
         return None
     value = config["MAIN"].get("work_dir", fallback="").strip()
