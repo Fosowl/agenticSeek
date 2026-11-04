@@ -47,6 +47,33 @@ class TestSaveBlock(unittest.TestCase):
         exec(Path(self.tool.resolve_path("values.py")).read_text(), namespace)
         self.assertEqual((namespace["first"], namespace["second"]), (1, 2))
 
+    def test_named_scripts_are_saved_separately(self):
+        blocks, groups = self.tool.load_exec_block_groups(
+            '```python:first.py\nprint("first")\n```\n'
+            '```python:second.py\nfrom __future__ import annotations\n'
+            'print("second")\n```\n'
+            '```python:first.py\nprint("more")\n```'
+        )
+        self.assertEqual(len(blocks), 3)
+        for path, fragments in groups.items():
+            self.tool.save_block(fragments, path)
+        for path, expected in [("first.py", "first\nmore\n"), ("second.py", "second\n")]:
+            result = subprocess.run(
+                [sys.executable, self.tool.resolve_path(path)],
+                capture_output=True, text=True, timeout=5,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, expected)
+
+    def test_one_named_destination_keeps_unnamed_fragments(self):
+        blocks, groups = self.tool.load_exec_block_groups(
+            '```python\nfirst = 1\n```\n'
+            '```python:values.py\nsecond = 2\n```\n'
+            '```python\nthird = 3\n```'
+        )
+        self.assertEqual(len(blocks), 3)
+        self.assertEqual(groups, {"values.py": blocks})
+
     def test_single_block_still_replaces_existing_file(self):
         self.tool.save_block(["old content"], "single.txt")
         self.tool.save_block(["new content\n"], "single.txt")
