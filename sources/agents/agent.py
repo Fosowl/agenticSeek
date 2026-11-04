@@ -272,7 +272,7 @@ class Agent():
         self.success = True
         for name, tool in self.tools.items():
             feedback = ""
-            blocks, save_path = tool.load_exec_block(answer)
+            blocks, save_groups = tool.load_exec_block_groups(answer)
 
             if blocks != None:
                 pretty_print(f"Executing {len(blocks)} {name} blocks...", color="status")
@@ -288,6 +288,6 @@ class Agent():
                         self.memory.push('user', feedback)
                         return False, feedback
                 self.memory.push('user', feedback)
-                if save_path != None:
-                    tool.save_block(blocks, save_path)
+                for save_path, file_blocks in save_groups.items():
+                    tool.save_block(file_blocks, save_path)
         return True, feedback
