@@ -31,10 +31,11 @@ def test_compile_and_run_timeouts_are_reported_as_failures(tool, stage):
     assert tool.interpreter_feedback(output).startswith("[failure]")
 
 
-def test_successful_execution_is_still_reported_as_success(tool):
-    completed = subprocess.CompletedProcess(["compiler"], 0, stdout="hello\n", stderr="")
+@pytest.mark.parametrize("stdout", ["hello\n", "timed out requests: 0\n"])
+def test_successful_execution_is_still_reported_as_success(tool, stdout):
+    completed = subprocess.CompletedProcess(["compiler"], 0, stdout=stdout, stderr="")
     with patch("subprocess.run", return_value=completed):
         output = tool.execute(["placeholder source"])
-    assert output == "hello\n"
+    assert output == stdout
     assert not tool.execution_failure_check(output)
     assert tool.interpreter_feedback(output).startswith("[success]")
