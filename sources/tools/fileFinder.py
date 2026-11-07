@@ -40,6 +40,7 @@ class FileFinder(Tools):
         Reads the content of a file with arbitrary encoding.
         Args:
             file_path (str): The path to the file to read
+            file_type (str): The MIME type of the file
         Returns:
             str: The content of the file in markdown format
         """
@@ -48,25 +49,32 @@ class FileFinder(Tools):
             if mime_type.startswith(('image/', 'video/', 'audio/')):
                 return "can't read file type: image, video, or audio files are not supported."
         content_raw = self.read_file(file_path)
-        if "text" in file_type:
+        # read_file returns an error string on failure, not file content.
+        # Check for error prefix to avoid treating error messages as file content.
+        if isinstance(content_raw, str) and content_raw.startswith("Error reading file:"):
+            return content_raw
+        if file_type and "text" in file_type:
             content = content_raw
-        elif "pdf" in file_type:
+        elif file_type and "pdf" in file_type:
             from pypdf import PdfReader
             reader = PdfReader(file_path)
             content = '\n'.join([pt.extract_text() for pt in reader.pages])
-        elif "binary" in file_type:
-            content = content_raw.decode('utf-8', errors='replace')
+        elif file_type and "binary" in file_type:
+            if isinstance(content_raw, bytes):
+                content = content_raw.decode('utf-8', errors='replace')
+            else:
+                content = str(content_raw)
         else:
             content = content_raw
         return content
     
-    def get_file_info(self, file_path: str) -> str:
+    def get_file_info(self, file_path: str) -> dict:
         """
         Gets information about a file, including its name, path, type, content, and permissions.
         Args:
             file_path (str): The path to the file
         Returns:
-            str: A dictionary containing the file information
+            dict: A dictionary containing the file information
         """
         try:
             safe_path = self.resolve_path(file_path)
@@ -89,7 +97,7 @@ class FileFinder(Tools):
         }
         return result
     
-    def recursive_search(self, directory_path: str, filename: str) -> str:
+    def recursive_search(self, directory_path: str, filename: str) -> str | None:
         """
         Recursively searches for files in a directory and its subdirectories.
         Args:
@@ -116,21 +124,7 @@ class FileFinder(Tools):
         return None
 
     def find_file(self, filename: str) -> str | None:
-        """Find a file that the model names in a file_finder block.
-
-        execute calls this for each block.
-        The name can be a workspace path, such as the .user_uploads/report.pdf
-        paths that the web interface adds to the user prompt, or a part of a
-        file name.
-        It returns the file at that exact path first, and else searches the
-        workspace by name.
-
-        Args:
-            filename (str): Value of the "name" parameter, from the model.
-
-        Returns:
-            str | None: Path of the file, or None when no file matches.
-        """
+        """Find a file that the model names in a file_finder block."""
         try:
             exact_path = self.resolve_path(filename)
         except (PermissionError, ValueError):
@@ -163,7 +157,8 @@ class FileFinder(Tools):
             print("File finder: search started...")
             file_path = self.find_file(filename)
             if file_path is None:
-                output = f"File: {filename} - not found\n"
+                # Bug fix: was using = instead of +=, overwriting previous results
+                output += f"File: {filename} - not found\n"
                 continue
             result = self.get_file_info(file_path)
             if "error" in result:
