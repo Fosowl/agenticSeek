@@ -156,7 +156,10 @@ class Tools():
         """
         for param_line in block.split('\n'):
             if parameter_name in param_line:
-                param_value = param_line.split('=')[1].strip()
+                parts = param_line.split('=', 1)
+                if len(parts) < 2:
+                    continue
+                param_value = parts[1].strip()
                 return param_value
         return None
     
