@@ -15,6 +15,14 @@ class BashInterpreter(Tools):
     """
     This class is a tool to allow agent for bash code execution.
     """
+    # Programs another tool of agenticSeek runs: the agent must not start them from bash.
+    INTERPRETERS = (
+        "python", "gcc", "g++", "mvn", "go", "java", "javac", "rustc", "clang", "clang++",
+    )
+    # A bash line can hold several commands: each part after one of these
+    # operators is a command of its own.
+    COMMAND_BOUNDARIES = re.compile(r"\|\||&&|[|;&\n]")
+
     def __init__(self):
         super().__init__()
         self.tag = "bash"
@@ -26,10 +34,16 @@ class BashInterpreter(Tools):
         Detect if AI attempt to run the code using bash.
         If so, return True, otherwise return False.
         Code written by the AI will be executed automatically, so it should not use bash to run it.
+        Only the program that each command starts is checked: an argument, a
+        path or a file name that merely begins with a language name ("google",
+        "pythonic.txt") does not start an interpreter.
         """
-        lang_interpreter = ["python", "gcc", "g++", "mvn", "go", "java", "javac", "rustc", "clang", "clang++", "rustc", "rustc++", "rustc++"]
-        for word in command.split():
-            if any(word.startswith(lang) for lang in lang_interpreter):
+        for command_part in self.COMMAND_BOUNDARIES.split(command):
+            words = command_part.split()
+            if not words:
+                continue
+            program = os.path.basename(words[0])
+            if any(program.startswith(interpreter) for interpreter in self.INTERPRETERS):
                 return True
         return False
     

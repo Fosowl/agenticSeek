@@ -85,6 +85,30 @@ class TestBashInterpreter(InterpreterTestCase):
         self.assertIn("not allowed", output)
         self.assertTrue(bash.execution_failure_check(output))
 
+    def test_command_that_only_mentions_a_language_runs(self):
+        """Regression: every word was prefix-matched against the language names, so
+        `echo hello from google` (like any command naming a "google"/"good..."/"pythonic"
+        argument or file) was refused as if it started Go, and produced no output."""
+        bash = BashInterpreter()
+        output = bash.execute(["echo hello from google"])
+        self.assertIn("hello from google", output)
+        self.assertNotIn("not allowed", output)
+        self.assertFalse(bash.execution_failure_check(output))
+
+    def test_interpreter_after_a_shell_operator_is_still_refused(self):
+        """The guard still refuses an interpreter started after && or ;."""
+        bash = BashInterpreter()
+        output = bash.execute(["echo ready && go build ./..."])
+        self.assertIn("not allowed", output)
+        self.assertTrue(bash.execution_failure_check(output))
+
+    def test_versioned_interpreter_name_is_still_refused(self):
+        """python3.11, gcc-13 and go1.22 still count as starting an interpreter."""
+        bash = BashInterpreter()
+        output = bash.execute(["python3.11 -c 'print(1)'"])
+        self.assertIn("not allowed", output)
+        self.assertTrue(bash.execution_failure_check(output))
+
 
 class TestPyInterpreter(InterpreterTestCase):
 
