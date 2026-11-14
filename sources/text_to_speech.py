@@ -193,8 +193,10 @@ if __name__ == "__main__":
     spk = Speech(enable=True, language="zh", voice_idx=0)
     for i in range(0, 2):
         print(f"Speaking chinese with voice {i}")
-        spk.speak(tosay_zh, voice_idx=i)
+        spk.set_voice(i)
+        spk.speak(tosay_zh)
     spk = Speech(enable=True, language="en", voice_idx=2)
     for i in range(0, 5):
         print(f"Speaking english with voice {i}")
-        spk.speak(tosay_en, voice_idx=i)
+        spk.set_voice(i)
+        spk.speak(tosay_en)
