@@ -98,6 +98,7 @@ class BashInterpreter(Tools):
             r"expected",
             r"errno",
             r"failed",
+            r"\ACommand [\s\S]* timed out\. Output:\n",
             r"invalid",
             r"unrecognized",
             r"exception",

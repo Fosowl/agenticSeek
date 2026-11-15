@@ -157,7 +157,6 @@ class FileFinder(Tools):
             print("File finder: search started...")
             file_path = self.find_file(filename)
             if file_path is None:
-                # Bug fix: was using = instead of +=, overwriting previous results
                 output += f"File: {filename} - not found\n"
                 continue
             result = self.get_file_info(file_path)

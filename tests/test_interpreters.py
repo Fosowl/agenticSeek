@@ -72,11 +72,21 @@ class TestBashInterpreter(InterpreterTestCase):
         bash = BashInterpreter()
         output = bash.execute(["sleep 5"], timeout=1)
         self.assertIn("timed out", output)
+        self.assertTrue(bash.execution_failure_check(output))
+        self.assertTrue(bash.interpreter_feedback(output).startswith("[failure]"))
 
     def test_failing_command_reports_return_code(self):
         bash = BashInterpreter()
         output = bash.execute(["exit 3"])
         self.assertIn("return code 3", output)
+
+    def test_timeout_words_in_successful_command_do_not_indicate_failure(self):
+        bash = BashInterpreter()
+        with open(os.path.join(self._work_dir, "app.log"), "w", encoding="utf-8") as log:
+            log.write("network timed out\n")
+        output = bash.execute(["grep -c 'timed out' app.log"])
+        self.assertTrue(output.endswith("\n1\n"), output)
+        self.assertTrue(bash.interpreter_feedback(output).startswith("[success]"))
 
     def test_skipped_language_command_is_reported_as_failure(self):
         """Regression: python from bash was skipped silently and reported as success with no output."""

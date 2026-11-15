@@ -134,6 +134,7 @@ if __name__ == "__main__":
 ```
 """
     py = PyInterpreter()
-    codes, save_path = py.load_exec_block(text)
-    py.save_block(codes, save_path)
+    codes, save_groups = py.load_exec_block_groups(text)
+    for save_path, blocks in save_groups.items():
+        py.save_block(blocks, save_path)
     print(py.execute(codes))

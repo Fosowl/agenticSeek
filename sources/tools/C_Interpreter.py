@@ -89,6 +89,7 @@ class CInterpreter(Tools):
         Check if the code execution failed.
         """
         error_patterns = [
+            r"^Execution timed out:",
             r"error", 
             r"failed", 
             r"traceback", 

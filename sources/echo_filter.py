@@ -4,6 +4,8 @@ Echo filter module for filtering out the assistant's own speech.
 Detects when the STT is hearing the TTS output by matching consecutive word sequences.
 """
 
+import re
+
 
 def is_echo(text: str, last_spoken_text: str, min_consecutive_words: int = 3) -> bool:
     """
@@ -41,7 +43,7 @@ def is_echo(text: str, last_spoken_text: str, min_consecutive_words: int = 3) ->
         sequence_str = " ".join(sequence)
         
         # Check if this exact sequence exists in the last spoken text
-        if sequence_str in last_spoken_text:
+        if re.search(r"(?<!\w)" + re.escape(sequence_str) + r"(?!\w)", last_spoken_text):
             return True
     
     # Also check: if spoken text contains a long sequence from transcribed
@@ -49,7 +51,7 @@ def is_echo(text: str, last_spoken_text: str, min_consecutive_words: int = 3) ->
         sequence = spoken_words[i:i + min_consecutive_words]
         sequence_str = " ".join(sequence)
         
-        if sequence_str in normalized_text:
+        if re.search(r"(?<!\w)" + re.escape(sequence_str) + r"(?!\w)", normalized_text):
             return True
     
     return False

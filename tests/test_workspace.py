@@ -91,3 +91,30 @@ class TestFileFinderWorkspaceIsolation(WorkspaceTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConfigIniEncodingTestCase(unittest.TestCase):
+    def test_config_ini_with_non_ascii_work_dir_is_utf8(self):
+        """config.ini is read as UTF-8, so a non-ASCII work_dir survives legacy code pages."""
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        old_cwd = os.getcwd()
+        self.addCleanup(os.chdir, old_cwd)
+        os.chdir(tmp)
+        expected = os.path.join(tmp, "工作区")
+        with open("config.ini", "w", encoding="utf-8") as f:
+            f.write("[MAIN]\nwork_dir = %s\n" % expected)
+        self._old_work_dir_value = os.environ.get("WORK_DIR")
+        os.environ["WORK_DIR"] = ""
+        self.addCleanup(self._restore_work_dir)
+        self.assertEqual(os.path.realpath(get_work_dir()), os.path.realpath(expected))
+
+    def _restore_work_dir(self):
+        if self._old_work_dir_value is None:
+            os.environ.pop("WORK_DIR", None)
+        else:
+            os.environ["WORK_DIR"] = self._old_work_dir_value
+
+
+if __name__ == "__main__":
+    unittest.main()
