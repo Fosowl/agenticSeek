@@ -262,6 +262,8 @@ class Agent():
     def execute_modules(self, answer: str) -> Tuple[bool, str]:
         """
         Execute all the tools the agent has and return the result.
+        The feedback of every block that ran is pushed to memory: the model
+        must see the output of each block it asked for, not only the last one.
         """
         feedback = ""
         success = True
@@ -276,17 +278,20 @@ class Agent():
 
             if blocks != None:
                 pretty_print(f"Executing {len(blocks)} {name} blocks...", color="status")
+                block_feedbacks = []
                 for block in blocks:
                     self.show_block(block)
                     output = tool.execute([block])
-                    feedback = tool.interpreter_feedback(output) # tool interpreter feedback
+                    block_feedback = tool.interpreter_feedback(output) # tool interpreter feedback
+                    block_feedbacks.append(block_feedback)
                     success = not tool.execution_failure_check(output)
-                    self.blocks_result.append(executorResult(block, feedback, success, name))
+                    self.blocks_result.append(executorResult(block, block_feedback, success, name))
                     self.blocks_result[-1].show()
                     if not success:
                         self.success = False
-                        self.memory.push('user', feedback)
-                        return False, feedback
+                        self.memory.push('user', "\n".join(block_feedbacks))
+                        return False, block_feedback
+                feedback = "\n".join(block_feedbacks)
                 self.memory.push('user', feedback)
                 for save_path, file_blocks in save_groups.items():
                     tool.save_block(file_blocks, save_path)

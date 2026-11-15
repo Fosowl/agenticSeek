@@ -1,8 +1,10 @@
 import unittest
 import asyncio
 import os
+import shutil
 import sys
-from unittest.mock import MagicMock, AsyncMock
+import tempfile
+from unittest.mock import MagicMock, AsyncMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add project root to Python path
 
@@ -25,6 +27,7 @@ from sources.agents.agent import Agent
 from sources.agents.file_agent import FileAgent, MAX_STEPS, STEP_LIMIT_MESSAGE
 from sources.agents.mcp_agent import McpAgent
 from sources.schemas import QueryRequest
+from sources.tools.tools import Tools
 
 
 def make_bare_agent(agent_class):
@@ -148,6 +151,68 @@ class TestQueryRequestStr(unittest.TestCase):
         """Regression: __str__ referenced self.lang / self.stt_enabled which don't exist."""
         request = QueryRequest(query="hello")
         self.assertIn("hello", str(request))
+
+
+class FakeBlockTool(Tools):
+    """A tool that reports two blocks and one distinct output per block."""
+
+    def __init__(self, failing_outputs=()):
+        super().__init__()
+        self.tag = "fake"
+        self.name = "fake tool"
+        self.description = "test tool"
+        self.failing_outputs = set(failing_outputs)
+        self.executed = []
+
+    def load_exec_block(self, llm_text):
+        return ["first block", "second block"], None
+
+    def execute(self, blocks, safety=False):
+        self.executed.extend(blocks)
+        return f"output of {blocks[0]}"
+
+    def execution_failure_check(self, output):
+        return output in self.failing_outputs
+
+    def interpreter_feedback(self, output):
+        return f"feedback: {output}"
+
+
+class TestExecuteModulesFeedback(unittest.TestCase):
+    """execute_modules must hand the output of every executed block to the model."""
+
+    def setUp(self):
+        self.work_dir = tempfile.mkdtemp()
+        env = patch.dict(os.environ, {"WORK_DIR": self.work_dir})
+        env.start()
+        self.addCleanup(env.stop)
+        self.addCleanup(shutil.rmtree, self.work_dir, True)
+
+    def test_every_block_output_reaches_memory(self):
+        """Regression: only the last block's feedback was pushed to memory, so the
+        model never saw the output of the blocks it asked for before that one."""
+        agent = make_bare_agent(Agent)
+        agent.tools = {"fake": FakeBlockTool()}
+        success, feedback = agent.execute_modules("run both blocks")
+        self.assertTrue(success)
+        pushed = "\n".join(call.args[1] for call in agent.memory.push.call_args_list)
+        self.assertIn("output of first block", pushed)
+        self.assertIn("output of second block", pushed)
+        self.assertIn("output of first block", feedback)
+        self.assertEqual(len(agent.blocks_result), 2)
+
+    def test_failing_block_keeps_earlier_outputs_in_memory(self):
+        """The failing block's feedback is returned, and the outputs that already
+        ran stay in memory so the model can fix the code with them."""
+        agent = make_bare_agent(Agent)
+        agent.tools = {"fake": FakeBlockTool(failing_outputs={"output of second block"})}
+        success, feedback = agent.execute_modules("run both blocks")
+        self.assertFalse(success)
+        self.assertIn("output of second block", feedback)
+        pushed = "\n".join(call.args[1] for call in agent.memory.push.call_args_list)
+        self.assertIn("output of first block", pushed)
+        self.assertIn("output of second block", pushed)
+        self.assertEqual(len(agent.blocks_result), 2)
 
 
 if __name__ == "__main__":
