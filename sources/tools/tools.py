@@ -119,9 +119,8 @@ class Tools():
             directory = self.work_dir
         file_path = self.resolve_path(os.path.join(directory, save_path_file))
         self._make_agent_dirs(directory)
-        for block in blocks:
-            with open(file_path, 'w') as f:
-                f.write(block)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(blocks))
         hand_over_path(file_path)
 
     def _make_agent_dirs(self, directory: str) -> None:
@@ -179,15 +178,28 @@ class Tools():
                 - List of extracted and processed code blocks
                 - The path the code blocks was saved to
         """
+        code_blocks, save_path, _ = self._parse_exec_blocks(llm_text)
+        return code_blocks, save_path
+
+    def load_exec_block_groups(self, llm_text: str):
+        """Return executable blocks and the blocks to save at each named path."""
+        code_blocks, save_path, save_groups = self._parse_exec_blocks(llm_text)
+        if len(save_groups) == 1:
+            # One named destination still collects all fragments in the response.
+            save_groups[save_path] = code_blocks
+        return code_blocks, save_groups
+
+    def _parse_exec_blocks(self, llm_text: str):
         assert self.tag != "undefined", "Tag not defined"
         start_tag = f'```{self.tag}' 
         end_tag = '```'
         code_blocks = []
         start_index = 0
         save_path = None
+        save_groups = {}
 
         if start_tag not in llm_text:
-            return None, None
+            return None, None, save_groups
 
         while True:
             start_pos = llm_text.find(start_tag, start_index)
@@ -216,9 +228,11 @@ class Tools():
                 content = content[content.find('\n')+1:]
             self.executable_blocks_found = True
             code_blocks.append(content)
+            if save_path is not None:
+                save_groups.setdefault(save_path, []).append(content)
             start_index = end_pos + len(end_tag)
         self.logger.info(f"Found {len(code_blocks)} blocks to execute")
-        return code_blocks, save_path
+        return code_blocks, save_path, save_groups
     
 if __name__ == "__main__":
     tool = Tools()
