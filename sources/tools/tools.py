@@ -145,19 +145,19 @@ class Tools():
         for created in missing:
             hand_over_path(created)
     
-    def get_parameter_value(self, block: str, parameter_name: str) -> str:
+    def get_parameter_value(self, block: str, parameter_name: str) -> str | None:
         """
         Get a parameter name.
         Args:
             block (str): The block of text to search for the parameter
             parameter_name (str): The name of the parameter to retrieve
         Returns:
-            str: The value of the parameter
+            str | None: The value of the parameter, or None when absent
         """
         for param_line in block.split('\n'):
-            if parameter_name in param_line:
-                param_value = param_line.split('=')[1].strip()
-                return param_value
+            name, separator, value = param_line.partition('=')
+            if separator and name.strip() == parameter_name:
+                return value.strip()
         return None
     
     def found_executable_blocks(self):
