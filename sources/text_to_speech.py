@@ -151,6 +151,8 @@ class Speech():
         lines = sentence.split('\n')
         if self.language == 'zh':
             line_pattern = r'^\s*[\u4e00-\u9fff\uFF08\uFF3B\u300A\u3010\u201C(（\[【《]'
+        elif self.language in {'fr', 'ja'}:
+            line_pattern = r'^\s*(?:[^\W\d_]|[«「『（])'
         else:
             line_pattern = r'^\s*[a-zA-Z]'
         filtered_lines = [line for line in lines if re.match(line_pattern, line)]
@@ -164,10 +166,15 @@ class Speech():
                 '',
                 sentence
             )
+        elif self.language == 'ja':
+            sentence = re.sub(r'[^\w\s、。！？「」『』（）・,.!?-]+', ' ', sentence)
         else:
             sentence = re.sub(r'\b[\w./\\-]+\b', self.extract_filename, sentence)
             sentence = re.sub(r'\b-\w+\b', '', sentence)
-            sentence = re.sub(r'[^a-zA-Z0-9.,!? _ -]+', ' ', sentence)
+            unsupported = (
+                r"[^\w.,!?«»'’ -]+" if self.language == 'fr' else r'[^a-zA-Z0-9.,!? _ -]+'
+            )
+            sentence = re.sub(unsupported, ' ', sentence)
             sentence = sentence.replace('.com', '')
 
         sentence = re.sub(r'\s+', ' ', sentence).strip()
