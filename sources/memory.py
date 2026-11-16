@@ -171,23 +171,6 @@ class Memory():
         write_json_atomic(path, self.memory)
         self.logger.info(f"Saved memory json at {path}")
 
-    def find_last_session_path(self, path: str) -> str | None:
-        """
-        Session recovery needs the most recent session file.
-        load_memory calls it with the agent session folder.
-        It sorts the session file names; the timestamp format makes this a time order.
-        Args:
-            path (str): agent session folder.
-        Returns:
-            str | None: file name of the newest session, or None when there is no session.
-        """
-        sessions = [name for name in os.listdir(path) if name.startswith('memory_') and name.endswith('.txt')]
-        if not sessions:
-            return None
-        last_session = max(sessions)
-        self.logger.info(f"Last session found at {last_session}")
-        return last_session
-
     def load_json_file(self, path: str):
         """
         Session recovery reads saved sessions from JSON files.
@@ -217,20 +200,27 @@ class Memory():
             return
         pretty_print(f"Loading {agent_type} past memories... ", color="status")
         save_path = os.path.join(self.conversation_folder, agent_type)
-        filename = self.find_last_session_path(save_path) if os.path.isdir(save_path) else None
-        if filename is None:
+        names = os.listdir(save_path) if os.path.isdir(save_path) else []
+        sessions = sorted(
+            (name for name in names if name.startswith('memory_') and name.endswith('.txt')),
+            reverse=True,
+        )
+        if not sessions:
             pretty_print("No memory to load.", color="success")
             return
-        history = self.load_json_file(os.path.join(save_path, filename))
-        if not is_valid_history(history):
-            self.logger.warning(f"Invalid session file {filename}, keeping current memory.")
-            pretty_print("Last session memory is unreadable, starting fresh.", color="warning")
+        for filename in sessions:
+            history = self.load_json_file(os.path.join(save_path, filename))
+            if not is_valid_history(history):
+                self.logger.warning(f"Skipping unreadable or invalid session file {filename}.")
+                continue
+            if history[-1]['role'] == 'user':
+                history.pop()
+            self.memory = history
+            self.compress()
+            self.logger.info(f"Restored session from {filename}")
+            pretty_print("Session recovered successfully", color="success")
             return
-        if history[-1]['role'] == 'user':
-            history.pop()
-        self.memory = history
-        self.compress()
-        pretty_print("Session recovered successfully", color="success")
+        pretty_print("No usable session memory found, keeping current memory.", color="warning")
 
     def reset(self, memory: list | None = None) -> None:
         """
