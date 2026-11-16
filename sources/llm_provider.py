@@ -152,7 +152,7 @@ class Provider:
             server_port = self.server_address.split(":")[-1] if ":" in str(self.server_address) else "11434"
             host = f"{self.internal_url}:{server_port}"
         else:
-            host = f"http://{self.server_address}"
+            host = self.server_address
         client = OllamaClient(host=host)
 
         try:
