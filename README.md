@@ -844,18 +844,6 @@ We’re looking for developers to improve AgenticSeek! Check out open issues or 
 
 ## Sponsors:
 
-### SwiftProxy
-
-<p align="center">
-  <a href="https://www.swiftproxy.net/?ref=Fosowl">
-    <img src="./media/banners/bannerSwiftProxy.png" alt="SwiftProxy Banner" width="800">
-  </a>
-</p>
-
-**Swiftproxy** provides 90M+ clean residential IPs across 220+ locations, supporting HTTP(S)/SOCKS5, IP rotation, Sticky Sessions, and precise location targeting. It helps AI agents and automation tools access websites reliably from different locations, making it suitable for web browsing, data collection, research, and location-based testing.
-
-*Free testing is available, with 10% off using code **PROXY90**.*
-
 ### SerpAPI
 
 <a href="https://serpapi.com/"><img src="./media/banners/sponsor_banner_serpapi.png" height="350" alt="SerpApi Banner" ></a>
