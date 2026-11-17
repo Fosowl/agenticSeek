@@ -110,8 +110,8 @@ _CONNECTION_NAMES = {"ConnectionError", "ConnectError", "APIConnectionError", "N
                      "NewConnectionError", "MaxRetryError", "gaierror"}
 _CONNECTION_TEXT = re.compile(r"refused|failed to connect|name or service not known|"
                               r"nodename nor servname|getaddrinfo failed|no route to host")
-_MODEL_MISSING_TEXT = re.compile(r"model[^.\n]{0,80}(?:not found|does not exist|is invalid|unknown)|"
-                                 r"(?:no such|unknown|invalid) model|not a valid model")
+_MODEL_MISSING_TEXT = re.compile(r"model[^.\n]{0,80}(?:not[_ ]found|does[_ ]not[_ ]exist|not[_ ]exist|"
+                                 r"is[_ ]invalid|unknown)|(?:no[_ ]such|unknown|invalid) model|not a valid model")
 _STATUS_TEXT = re.compile(r"\b(?:error code|status(?: code)?|http)[:\s]+(\d{3})\b", re.IGNORECASE)
 _STATUS_PREFIX = re.compile(r"^Error code: \d{3} - ")
 _OS_ERROR_TEXT = re.compile(r"\[Errno -?\d+\] [^'\"()\[\]]+")
@@ -177,8 +177,10 @@ def diagnose_provider_error(exc: BaseException, ctx: ProviderContext) -> Provide
         kind = "payment"
     elif status == 429 or "RateLimitError" in names or "rate limit" in text or "too many requests" in text:
         kind = "rate_limit"
-    elif status == 404 or "NotFoundError" in names or _MODEL_MISSING_TEXT.search(text):
+    elif _MODEL_MISSING_TEXT.search(text):
         kind = "model_not_found"
+    elif status == 404 or "NotFoundError" in names:
+        kind = "not_found"   # a 404 the server did not tie to the model: usually the URL path
     elif status in (400, 413, 422) or names & {"BadRequestError", "UnprocessableEntityError"}:
         kind = "bad_request"
     elif (status is not None and status >= 500) or "InternalServerError" in names \
@@ -288,6 +290,30 @@ def _explain(kind: str, ctx: ProviderContext, detail: str,
                 [f"Your {label} account has no credits left, or billing is not set up."],
                 [f"Add credits or a payment method to your {label} account.",
                  "Or switch to a free model or a local provider."])
+
+    if kind == "not_found":
+        # A 404 whose own words do not name the model: usually the URL path, not provider_model.
+        where = f" at {addr}" if ctx.runs_locally and addr else ""
+        causes = [f"The URL path does not exist{where}: with a local OpenAI-compatible server (llama.cpp, "
+                  "Strata, Colibri, LM Studio...), provider_server_address often does not match what the "
+                  "provider expects.",
+                  f"The model id is wrong: '{model}' is not served and the server answered with a plain 'not found'."]
+        fixes = []
+        if ctx.provider == "openai":
+            fixes.append("The openai provider uses the address as-is: local servers need the /v1 suffix and "
+                         "no http:// (provider_server_address = 127.0.0.1:1234/v1).")
+        if ctx.provider == "lm-studio":
+            fixes.append("The lm-studio provider appends /v1/chat/completions itself: give it http:// and "
+                         "no /v1 (provider_server_address = http://127.0.0.1:1234).")
+        if ctx.runs_locally and addr:
+            base = addr.rstrip("/")
+            base = base[:-3] if base.endswith("/v1") else base
+            base = base if base.startswith(("http://", "https://")) else f"http://{base}"
+            fixes.append(f"List what the server serves (curl {base}/v1/models) and copy an id verbatim into "
+                         "provider_model (mind - vs _ and case).")
+        else:
+            fixes.append(f"Use a model id exactly as listed in the {label} documentation.")
+        return ("Not found (404)", f"{label} answered 404{where}{http}{said}", causes, fixes)
 
     if kind == "model_not_found":
         causes = [f"provider_model = {model} in config.ini is misspelled or not offered by {label}."]

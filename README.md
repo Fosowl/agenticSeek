@@ -182,6 +182,7 @@ Do not copy and paste the example configuration directly, as comments will cause
 - Do *NOT* set provider_name to `openai` if using LM-studio for running LLMs. Set it to `lm-studio`.
 
 - Some provider (eg: lm-studio) require you to have `http://` in front of the IP. For example `http://127.0.0.1:1234`
+- The openai provider is the opposite of lm-studio: with is_local = True it prefixes `http://` itself and needs the `/v1` suffix, e.g. `127.0.0.1:1234/v1` (no `http://`).
 
 **List of local providers**
 
@@ -189,7 +190,7 @@ Do not copy and paste the example configuration directly, as comments will cause
 |-----------|--------|-----------------------------------------------------------|
 | ollama    | Yes    | Run LLMs locally with ease using ollama as a LLM provider |
 | lm-studio  | Yes    | Run LLM locally with LM studio (set `provider_name` to `lm-studio`)|
-| openai    | Yes     |  Use openai compatible API (eg: llama.cpp server)  |
+| openai    | Yes     |  Use any OpenAI-compatible API (llama.cpp, Strata, Colibri...); with is_local = True the address must end with /v1  |
 
 Next step: [Start services and run AgenticSeek](#Start-services-and-Run)
 
@@ -423,6 +424,46 @@ provider_name = lm-studio
 provider_model = your-model
 provider_server_address = http://x.x.x.x:8080
 ```
+
+**Strata**
+
+[Strata](https://github.com/Niko1221/Strata) serves Qwen and DeepSeek-family models with an OpenAI-compatible API. With the Strata Terminal:
+
+```sh
+strata launch --family qwen --model q2_0 --yes --no-tui
+```
+
+or from a source checkout:
+
+```sh
+python -m serve.server --engine strata --config <config.json> --port 1234
+```
+
+The name to put in `provider_model` is whatever the server reports (for a JSON config, its `model_name` field), so check first:
+
+```sh
+curl http://127.0.0.1:1234/v1/models
+```
+
+```ini
+[MAIN]
+is_local = True
+provider_name = openai
+provider_model = qwen3.8-flash-next-uncensored-iq4_xs
+provider_server_address = 127.0.0.1:1234/v1
+```
+
+(`provider_name = lm-studio` works too, with `http://127.0.0.1:1234` and no `/v1`.) Reasoning models fill `content` only after their thinking turn: if replies come back empty, give the model more output room or pick a non-reasoning model.
+
+**Colibri**
+
+[Colibri](https://github.com/JustVugg/colibri) is a pure-C engine with the same OpenAI-compatible API:
+
+```sh
+COLI_MODEL=/path/to/glm52_i4 coli serve --host 127.0.0.1 --port 8000 --model-id glm-5.2-colibri
+```
+
+`provider_model` is the `--model-id` you chose; the address rule is the same as for Strata (`127.0.0.1:8000/v1` for the openai provider). If you start it with `COLI_API_KEY`, set the same key as `OPENAI_API_KEY` in your `.env`.
 
 **Legacy: custom AgenticSeek LLM server (deprecated)**
 
@@ -731,6 +772,18 @@ Exception: Provider lm-studio failed: HTTP request failed: No connection adapter
 *   **Solution:**
     *   Ensure the address includes `http://`. LM-Studio typically defaults to `http://127.0.0.1:1234`.
     *   Correct `config.ini`: `provider_server_address = http://127.0.0.1:1234` (or your actual LM-Studio server port).
+
+## Local OpenAI-compatible server: "Not found (404)" or "Model not found"
+
+```
+Not found (404): OpenAI answered 404 at 127.0.0.1:1234 (HTTP 404): not found
+```
+
+*   **Cause:** The request reached the server, but nothing matched the URL path. With `provider_name = openai` and `is_local = True`, `provider_server_address` is passed to the OpenAI client unchanged (with `http://` prefixed for you): an address missing the `/v1` suffix sends requests to `/chat/completions`, a path local servers (llama.cpp, Strata, Colibri...) do not serve. A genuinely unknown model id gives a different panel — "Model not found" — when the server's 404 says so (`model not found`, `does not exist`...).
+*   **Solution:**
+    *   With the `openai` provider: `provider_server_address = 127.0.0.1:1234/v1` — no `http://`, and the `/v1` suffix is required.
+    *   With the `lm-studio` provider: the opposite — `http://127.0.0.1:1234` with the scheme and no `/v1`, because that provider appends `/v1/chat/completions` itself.
+    *   Verify the exact model id: `curl http://127.0.0.1:1234/v1/models` and copy an `id` from the answer verbatim (mind `-` vs `_` and case).
 
 ## SearxNG Base URL Not Provided
 
