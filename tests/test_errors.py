@@ -72,6 +72,26 @@ class TestDiagnoseProviderError(unittest.TestCase):
         err = diagnose_provider_error(exc, ProviderContext("openrouter", "openai/gpt-oss-12b"))
         self.assertEqual(err.kind, "model_not_found")
 
+    def test_local_404_plain_not_found_is_reported_as_path_not_model(self):
+        # local servers (llama.cpp, Strata, Colibri...) answer {"message": "not found"} for a wrong URL path
+        exc = openai_status_error(openai.NotFoundError, 404, {"message": "not found"})
+        ctx = ProviderContext("openai", "qwen3.8-flash-next-uncensored-iq4_xs", "127.0.0.1:1234", is_local=True)
+        err = diagnose_provider_error(exc, ctx)
+        self.assertEqual((err.kind, err.status_code), ("not_found", 404))
+        self.assertNotIn("has no model", err.message)
+        self.assertTrue(any("/v1" in fix for fix in err.fixes))
+
+    def test_404_model_not_found_still_names_the_model(self):
+        exc = openai_status_error(openai.NotFoundError, 404, {"message": "model not found"})
+        err = diagnose_provider_error(exc, ProviderContext("openai", "m", "127.0.0.1:1234", is_local=True))
+        self.assertEqual(err.kind, "model_not_found")
+        self.assertIn("has no model", err.message)
+
+    def test_deepseek_model_not_exist_wording_is_model_not_found(self):
+        exc = openai_status_error(openai.NotFoundError, 404, {"message": "Model Not Exist"})
+        err = diagnose_provider_error(exc, ProviderContext("deepseek", "deepseek-chat"))
+        self.assertEqual(err.kind, "model_not_found")
+
     def test_missing_module_suggests_pip_install(self):
         exc = ModuleNotFoundError("No module named 'litellm'", name="litellm")
         err = diagnose_provider_error(exc, ProviderContext("litellm", "gpt-4o-mini"))
