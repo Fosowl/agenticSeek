@@ -21,6 +21,9 @@ class FileFinder(Tools):
     def read_file(self, file_path: str) -> str:
         """
         Reads the content of a file.
+        The file is decoded as UTF-8, independent of the platform locale, to
+        match the encoding that save_block and the files API write; bytes that
+        do not decode become replacement characters instead of an error.
         Args:
             file_path (str): The path to the file to read
         Returns:
@@ -28,7 +31,7 @@ class FileFinder(Tools):
         """
         try:
             safe_path = self.resolve_path(file_path)
-            with open(safe_path, 'r') as file:
+            with open(safe_path, 'r', encoding='utf-8', errors='replace') as file:
                 return file.read()
         except PermissionError as e:
             return f"Error reading file: {e}"
