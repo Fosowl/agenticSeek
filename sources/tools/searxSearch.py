@@ -311,7 +311,9 @@ class searxSearch(Tools):
         """
         Checks if the execution failed based on the output.
         """
-        return "Error" in output or "No search results" in output
+        # Real failures from execute() start with "Error: "; a result that merely
+        # mentions "Error" in its title or snippet is a successful search.
+        return output.startswith("Error") or "No search results" in output
 
     def interpreter_feedback(self, output: str) -> str:
         """
