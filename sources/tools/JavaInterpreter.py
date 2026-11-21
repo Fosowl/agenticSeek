@@ -33,7 +33,7 @@ class JavaInterpreter(Tools):
             hand_over_path(tmpdirname)
             source_file = os.path.join(tmpdirname, "Main.java")
             class_dir = tmpdirname
-            with open(source_file, 'w') as f:
+            with open(source_file, 'w', encoding="utf-8") as f:
                 f.write(code)
 
             try:
