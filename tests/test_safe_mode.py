@@ -51,6 +51,13 @@ class TestSafeMode(unittest.TestCase):
         self._write_config("")
         self.assertTrue(_SafeModeTool().safe_mode)
 
+    def test_config_with_non_ascii_work_dir_is_read_as_utf8(self):
+        """config.ini is UTF-8; reading it with the locale codec (cp936) raised."""
+        with open(os.path.join(self._dir, "config.ini"), "w", encoding="utf-8") as f:
+            f.write("[MAIN]\nwork_dir = {}\nsafe_mode = False\n".format(
+                os.path.join(self._dir, "工作区")))
+        self.assertFalse(_SafeModeTool().safe_mode)
+
 
 if __name__ == "__main__":
     unittest.main()
