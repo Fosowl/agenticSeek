@@ -127,6 +127,18 @@ class TestPyInterpreter(InterpreterTestCase):
         py = PyInterpreter()
         self.assertFalse(py.execution_failure_check("hello\n"))
 
+    def test_successful_output_that_mentions_failure_is_not_flagged(self):
+        """Regression: the failure check matched words of the program's own output,
+        so correct code was reported as failed and the agent retried it forever."""
+        py = PyInterpreter()
+        for line in ("tests: 3 passed, 0 failed", "expected 42, got 42",
+                     "no exception raised", "invalid input handled"):
+            with self.subTest(line=line):
+                output = py.execute([f'print({line!r})'])
+                self.assertEqual(output, line + "\n")
+                self.assertFalse(py.execution_failure_check(output))
+                self.assertTrue(py.interpreter_feedback(output).startswith("[success]"))
+
     def test_curses_import_is_refused_with_actionable_message(self):
         """Regression: curses code died with a cryptic 'cbreak() returned ERR'
         traceback the agent could not act on, so it retried forever."""
