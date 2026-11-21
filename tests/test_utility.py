@@ -37,6 +37,17 @@ class TestUtility(unittest.TestCase):
         color_map = get_color_map()
         self.assertEqual(color_map["failure"], "red")
 
+    def test_error_color_is_supported(self):
+        """Test that 'error' is a supported color mapping to red.
+
+        Callers pass color="error" (api.py, memory.py, language.py); before the
+        fix it was not in the map and silently fell back to "info" (black on
+        Windows, cyan elsewhere) instead of an error color.
+        """
+        color_map = get_color_map()
+        self.assertIn("error", color_map, "color='error' silently falls back to 'info'")
+        self.assertEqual(color_map["error"], "red")
+
 
 if __name__ == '__main__':
     unittest.main()
