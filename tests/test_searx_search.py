@@ -85,6 +85,19 @@ class TestSearxSearch(unittest.TestCase):
         output = "Search completed successfully"
         self.assertFalse(self.search_tool.execution_failure_check(output))
 
+    def test_execution_failure_check_error_word_in_results(self):
+        # A successful search whose title or snippet merely mentions "Error"
+        # must not be reported as a failed search
+        output = ("Title:How to fix Windows Error Reporting\n"
+                  "Snippet:Steps to disable the error dialog.\n"
+                  "Link:https://support.example.com/error-reporting")
+        self.assertFalse(self.search_tool.execution_failure_check(output))
+
+    def test_execution_failure_check_real_failures_still_flagged(self):
+        # Genuine failures start with "Error: " (see execute)
+        self.assertTrue(self.search_tool.execution_failure_check("Error: Empty search query provided."))
+        self.assertTrue(self.search_tool.execution_failure_check("Error: No search query provided."))
+
 
 def html_page(*links):
     articles = "".join(f'<article class="result"><a class="url_header" href="{link}"></a>'
