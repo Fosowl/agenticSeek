@@ -14,6 +14,7 @@ def get_color_map():
         color_map = {
             "success": "green",
             "failure": "red",
+            "error": "red",
             "status": "light_green",
             "code": "light_blue",
             "warning": "yellow",
@@ -24,6 +25,7 @@ def get_color_map():
         color_map = {
             "success": "green",
             "failure": "red",
+            "error": "red",
             "status": "light_green",
             "code": "light_blue",
             "warning": "yellow",
@@ -48,11 +50,13 @@ def pretty_print(text, color="info", no_newline=False):
         color (str, optional): The color to use. Defaults to "info".
             Valid colors are:
             - "success": Green
-            - "failure": Red 
+            - "failure": Red
+            - "error": Red (same as "failure")
             - "status": Light green
             - "code": Light blue
             - "warning": Yellow
             - "output": Cyan
+            - "info": Cyan (black on Windows)
             - "default": Black (Windows only)
     """
     stop_animation()
