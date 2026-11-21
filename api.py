@@ -54,7 +54,7 @@ celery_app = Celery("tasks", broker=_redis_url, backend=_redis_url)
 celery_app.conf.update(task_track_started=True)
 logger = Logger("backend.log")
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('config.ini', encoding='utf-8')
 
 allowed_origins = [
     origin.strip()

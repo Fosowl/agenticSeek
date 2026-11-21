@@ -59,7 +59,7 @@ class Tools():
     def create_work_dir(self):
         """Create and return the isolated agent workspace directory."""
         if self.config_exists():
-            self.config.read('./config.ini')
+            self.config.read('./config.ini', encoding='utf-8')
         return ensure_work_dir()
 
     def resolve_path(self, path: str) -> str:

@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('config.ini', encoding='utf-8')
 
 async def main():
     pretty_print("Initializing...", color="status")
