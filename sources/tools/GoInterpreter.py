@@ -33,7 +33,7 @@ class GoInterpreter(Tools):
             hand_over_path(tmpdirname)
             source_file = os.path.join(tmpdirname, "temp.go")
             exec_file = os.path.join(tmpdirname, "temp")
-            with open(source_file, 'w') as f:
+            with open(source_file, 'w', encoding="utf-8") as f:
                 f.write(code)
 
             try:
