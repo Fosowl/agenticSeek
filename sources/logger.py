@@ -28,7 +28,7 @@ class Logger:
         self.logger.setLevel(logging.DEBUG)
         self.logger.handlers.clear()
         self.logger.propagate = False
-        file_handler = logging.FileHandler(self.log_path)
+        file_handler = logging.FileHandler(self.log_path, encoding="utf-8")
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
