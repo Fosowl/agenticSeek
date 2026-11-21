@@ -20,6 +20,9 @@ class PyInterpreter(Tools):
         (re.compile(r"(?<![\w.])(?<!def\s)input\s*\("), "input()"),
     ]
 
+    # Every failure that execute() returns starts with one of these markers.
+    FAILURE_MARKERS = ("code execution failed:", "Code rejected by user.")
+
     def __init__(self):
         super().__init__()
         self.tag = "python"
@@ -91,25 +94,15 @@ class PyInterpreter(Tools):
     def execution_failure_check(self, feedback:str) -> bool:
         """
         Check if the code execution failed.
+        execute() prefixes every failure with one of FAILURE_MARKERS, so the
+        program's own output can mention words like "failed", "expected" or
+        "invalid" without being reported as a failed run.
         """
-        error_patterns = [
-            r"expected", 
-            r"errno", 
-            r"failed", 
-            r"traceback", 
-            r"invalid", 
-            r"unrecognized", 
-            r"exception", 
-            r"syntax", 
-            r"crash", 
-            r"segmentation fault", 
-            r"core dumped"
-        ]
-        combined_pattern = "|".join(error_patterns)
-        if re.search(combined_pattern, feedback, re.IGNORECASE):
-            self.logger.error(f"Execution failure detected: {feedback}")
+        text = feedback or ""
+        if text.lstrip().startswith(self.FAILURE_MARKERS):
+            self.logger.error(f"Execution failure detected: {text}")
             return True
-        self.logger.info("No execution success detected.")
+        self.logger.info("No execution failure detected.")
         return False
 
 if __name__ == "__main__":
