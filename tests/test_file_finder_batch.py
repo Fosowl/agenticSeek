@@ -38,3 +38,13 @@ def test_batch_preserves_each_file_result_in_order(finder, names):
         position = output.find(result, offset)
         assert position >= offset, output
         offset = position + len(result)
+
+
+def test_reads_a_utf8_file_with_non_ascii_text(finder):
+    """save_block writes UTF-8, so read_file has to read UTF-8: the platform code page (cp1252, cp936, ...)
+    cannot decode it, and every workspace file with non-ASCII text came back as "Error reading file: ..."."""
+    content = "Grüße aus Köln — naïve café 中文\n"
+    finder.save_block([content], "notes.txt")
+
+    assert finder.read_file("notes.txt") == content
+    assert finder.execute(["action=read\nname=notes.txt"]) == ("Content:\n" + content).strip()
