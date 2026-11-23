@@ -28,7 +28,10 @@ class FileFinder(Tools):
         """
         try:
             safe_path = self.resolve_path(file_path)
-            with open(safe_path, 'r') as file:
+            # save_block writes UTF-8, so read UTF-8: the platform code page
+            # (cp1252, cp936, ...) cannot decode it and raised UnicodeDecodeError
+            # on every workspace file with non-ASCII text.
+            with open(safe_path, 'r', encoding='utf-8', errors='replace') as file:
                 return file.read()
         except PermissionError as e:
             return f"Error reading file: {e}"
