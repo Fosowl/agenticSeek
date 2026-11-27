@@ -76,6 +76,7 @@ PROVIDER_LABELS = {
     "dsk_deepseek": "DeepSeek (dsk)",
     "openrouter": "OpenRouter",
     "trustedrouter": "TrustedRouter",
+    "llmtr": "LLMTR",
     "anthropic": "Anthropic",
     "minimax": "MiniMax",
     "litellm": "LiteLLM",
